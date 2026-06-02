@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.yaahua.vcam">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.VCAM">
+
+        <activity
+            android:name="com.yaahua.vcam.MainActivity"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.VCAM">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="com.yaahua.vcam.VideoProvider"
+            android:authorities="com.yaahua.vcam.provider"
+            android:exported="true"
+            android:grantUriPermissions="true" />
+
+        <receiver
+            android:name="com.yaahua.vcam.ConfigReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.yaahua.vcam.ACTION_REQUEST_CONFIG" />
+            </intent-filter>
+        </receiver>
+
+        <service
+            android:name="com.yaahua.vcam.NotificationService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <meta-data
+            android:name="xposedmodule"
+            android:value="true" />
+        <meta-data
+            android:name="xposeddescription"
+            android:value="安卓虚拟摄像头" />
+        <meta-data
+            android:name="xposedminversion"
+            android:value="51" />
+    </application>
+
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+</manifest>
