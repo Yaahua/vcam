@@ -8,10 +8,10 @@ android {
 
     signingConfigs {
         release {
-            storeFile file(findProperty('KEYSTORE_FILE') ?: rootProject.file('vcam.keystore'))
-            storePassword findProperty('KEYSTORE_PASSWORD') ?: 'vcam123456'
-            keyAlias findProperty('KEY_ALIAS') ?: 'vcam'
-            keyPassword findProperty('KEY_PASSWORD') ?: 'vcam123456'
+            storeFile rootProject.file('vcam.keystore')
+            storePassword 'vcam123456'
+            keyAlias 'vcam'
+            keyPassword 'vcam123456'
         }
     }
 

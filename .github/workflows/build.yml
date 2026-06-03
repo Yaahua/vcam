@@ -46,11 +46,7 @@ jobs:
           keytool -genkey -v -keystore vcam.keystore -alias vcam -keyalg RSA -keysize 2048 -validity 10000 \
             -storepass vcam123456 -keypass vcam123456 \
             -dname "CN=VCAM, OU=VCAM, O=VCAM, L=Unknown, ST=Unknown, C=CN"
-          ./gradlew assembleRelease --stacktrace \
-            -PKEYSTORE_FILE=vcam.keystore \
-            -PKEYSTORE_PASSWORD=vcam123456 \
-            -PKEY_ALIAS=vcam \
-            -PKEY_PASSWORD=vcam123456
+          ./gradlew assembleRelease --stacktrace
 
       - name: Upload APK (Release)
         uses: actions/upload-artifact@v4
