@@ -33,7 +33,7 @@ data class MainUiState(
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val configManager = ConfigManager()
+    private val configManager = ConfigManager().apply { setContext(application) }
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 

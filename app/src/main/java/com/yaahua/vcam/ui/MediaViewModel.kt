@@ -44,7 +44,7 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
     val uiState: StateFlow<MediaUiState> = _uiState.asStateFlow()
 
     private val videoDir = File("/storage/emulated/0/DCIM/Camera1/")
-    private val configManager = ConfigManager()
+    private val configManager = ConfigManager().apply { setContext(application) }
 
     init {
         if (!videoDir.exists()) videoDir.mkdirs()
