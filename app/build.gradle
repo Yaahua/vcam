@@ -3,6 +3,7 @@ plugins {
 }
 
 android {
+    namespace 'com.yaahua.vcam'
     compileSdk 33
 
     defaultConfig {
