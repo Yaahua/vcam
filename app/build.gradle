@@ -6,6 +6,15 @@ android {
     namespace 'com.yaahua.vcam'
     compileSdk 33
 
+    signingConfigs {
+        release {
+            storeFile file(findProperty('KEYSTORE_FILE') ?: rootProject.file('vcam.keystore'))
+            storePassword findProperty('KEYSTORE_PASSWORD') ?: 'vcam123456'
+            keyAlias findProperty('KEY_ALIAS') ?: 'vcam'
+            keyPassword findProperty('KEY_PASSWORD') ?: 'vcam123456'
+        }
+    }
+
     defaultConfig {
         applicationId "com.yaahua.vcam"
         minSdk 21
@@ -19,6 +28,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }

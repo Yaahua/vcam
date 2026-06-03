@@ -42,11 +42,19 @@ jobs:
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        run: ./gradlew assembleRelease --stacktrace
+        run: |
+          keytool -genkey -v -keystore vcam.keystore -alias vcam -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass vcam123456 -keypass vcam123456 \
+            -dname "CN=VCAM, OU=VCAM, O=VCAM, L=Unknown, ST=Unknown, C=CN"
+          ./gradlew assembleRelease --stacktrace \
+            -PKEYSTORE_FILE=vcam.keystore \
+            -PKEYSTORE_PASSWORD=vcam123456 \
+            -PKEY_ALIAS=vcam \
+            -PKEY_PASSWORD=vcam123456
 
       - name: Upload APK (Release)
         uses: actions/upload-artifact@v4
         with:
           name: VCAM-Release-APK
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: warn
