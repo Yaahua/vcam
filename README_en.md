@@ -1,67 +1,135 @@
-# android_virtual_cam
+# VCAM — Android Virtual Camera
 
 [简体中文](./README.md) | [繁體中文](./README_tc.md) | [English](./README_en.md)
 
-A virtual camera based on Xposed
+An Xposed / LSPosed / LSPatch module that replaces camera feed and microphone input in any app.
 
-## DO NOT USE FOR ANY ILLEGAL PURPOSE, YOU NEED TO TAKE ALL RESPONSIBILITY AND CONSEQUENCE!
+> ⚠️ **DO NOT USE FOR ANY ILLEGAL PURPOSE. YOU TAKE FULL RESPONSIBILITY.**
 
-## Supported platform
+---
+
+## Features
+
+- 🎥 **Video Replacement** — Replace camera preview & capture with local videos or network streams
+- 🎤 **Microphone Control** — Mute, audio replacement, or video audio sync modes
+- 📸 **Photo Replacement** — Intercept photo capture requests, inject custom images
+- 🔀 **Random Playback** — Shuffle through your video collection
+- 🔔 **Notification Control** — Quick video switching from the notification shade
+- 🌐 **Network Streaming** — RTSP/RTMP/HLS streaming source support
+- 📱 **Jetpack Compose UI** — Modern Material3 interface
+- 🔧 **LSPatch Compatible** — No root required with LSPatch injection
+
+---
+
+## Supported Platforms
+
+| Framework | Method | Root Required |
+|-----------|--------|---------------|
+| LSPatch | APK injection (no root) | ❌ No |
+| LSPosed | Xposed module | ✅ Yes |
+| EdXposed | Xposed module | ✅ Yes |
+| Original Xposed | Xposed module | ✅ Yes |
 
 - Android 5.0+
+- Camera1 & Camera2 API support
+- H.264/H.265 hardware decoding
 
-## Usage
+---
 
-1. Install this module , enable it in Xposed . Lsposed and other framework which have a scope list, you need to choose target app instead of System Framework.
+## Quick Start
 
-2. In system Setting, authorize target to access local storage, and force stop the app. If the app does not request this permission, see step3.
+### Installation
 
-3. open target app, if the app does not have the permission to access local storage. There will be a toast message showing that `Camera1` directory has been redirect to app's private directory `/[INTERNEL_STORAGE]/Android/data/[package_name]/files/Camera1/`. If there isn't the message, the default `Camera1` directory is `/[INTERNEL_STORAGE]/DCIM/Camera1/`. If the directory doesn't exist. Please create it by yourself.
+1. **LSPatch (recommended, no root)**：Load the module APK in LSPatch Manager, select target apps, apply injection
+2. **LSPosed**：Enable the module in LSPosed scope for target apps, force-stop the targets
+3. **Original Xposed**：Enable module in Xposed Installer, reboot device
 
-> Attention: `Camera1` in the private directory only works for single app.
+### Usage
 
-4. Open the camera in target app. There will be a toast message showing the resolution (宽width: , 高height:) . And you need to adjust the replacing video's resolution to make them same. Name it as `virtual.mp4`, put it under `Camera1` directory.
+1. Grant target app "read storage" permission, force-stop it
+2. Open target app, enter camera preview — a toast will show the resolution (e.g. "宽：1920 高：1080")
+3. Prepare a replacement video matching that resolution, name it `virtual.mp4`, place in the `Camera1` directory:
+   - With storage permission: `/Internal Storage/DCIM/Camera1/virtual.mp4`
+   - Without storage permission: `/Internal Storage/Android/data/[package]/files/Camera1/virtual.mp4`
+4. Reopen the target app — the camera feed is now replaced
 
-5. If there is a toast message when you take photos in app ("发现拍照")，it shows the photo's resolution. You need to prepare a photo which has the same resolution. Name it as `1000.bmp` . Put it under `Camera1` directory. (it support other image format renamed to bmp ). If there isn't a toast message , `1000.bmp` will have nothing to do with replacing capture.
+### Control Files (global, real-time)
 
-6. If you need to play video's sound, create `./DCIM/Camera1/Camera1/virtual.mp4` under `Camera1` directory. (Global real-time effective)
+| File | Effect | Location |
+|------|--------|----------|
+| `no-silent.jpg` | Enable video audio | `DCIM/Camera1/` |
+| `disable.jpg` | Temporarily disable replacement | `DCIM/Camera1/` |
+| `no_toast.jpg` | Suppress toast messages | `DCIM/Camera1/` |
+| `force_show.jpg` | Force show directory hint | `DCIM/Camera1/` |
+| `private_dir.jpg` | Force private directory | `DCIM/Camera1/` |
 
-7. If you need to turn off the module temporarily, create `./DCIM/Camera1/Camera1/virtual.mp4` under `Camera1` directory. (Global real-time effective)
+> 💡 All above controls can also be configured via the VCAM management app UI — no manual file creation needed.
 
-8. If you find toast messages annoying, you can create a `no_toast.jpg` file in the `/[INTERNEL_STORAGE]/DCIM/Camera1/` directory. (Global real-time effective)
+---
 
-9. The directory redirection message is displayed only once by default. If you miss the toast message of directory redirection, you can create a `force_show.jpg` file in the `/[INTERNEL_STORAGE]/DCIM/Camera1/` directory to override the default setting. (Global real-time effective)
+## App Interface
 
-10. If you need to allocate videos for each application, you can create `private_dir.jpg` in the `/[INTERNEL_STORAGE]/DCIM/Camera1/` directory to enforce apps use private directory. (Global real-time effective)
+The VCAM management app is built with Jetpack Compose Material3, featuring a three-tab layout:
 
-> Note: the configuration of 6 ~ 10 are in the application. You can quickly configure them in the application or create files manually.
+- **Home** — Module status at a glance: playback mode, mic mode, video audio, notification state
+- **Manage** — Video/audio file management with import, selection, and deletion
+- **Settings** — General settings (random play, audio, mic hook), advanced settings (private dir, toast), network streaming
+
+---
 
 ## FAQ
 
-Q1. The problems of front camera?  
-A1. In most cases , the video for replacing front camera need to be flipped horizontally and rotated right 90 degrees. The video's resolution **after being processed** need to same with that in toast message.  But in some came, it doesn't need to make adjustment, so you need to judge it according to situation.
+### Front camera orientation is wrong?
+Front camera replacement videos generally need horizontal flip + 90° right rotation. The post-process resolution must match the toast prompt.
 
-Q2. Black screen ? Open camera fail ?  
-A2. Till now ,there are a few apps that can't be hooked, especially the system camera. Or it caused by wrong `Camera1` directory（Whether two levels of Camera1 directory were created, like `./DCIM/Camera1/Camera1/virtual.mp4`, only one level is needed）.
+### Black screen / camera fails to open?
+- Verify video path is correct (only one level of `Camera1` directory)
+- Some system cameras cannot be hooked
+- Check video codec compatibility
 
-Q3. Blurred screen?  
-A3. The resolution of video is wrong.
+### Blurred or distorted video?
+Video resolution doesn't match the prompted resolution. Adjust and retry.
 
-Q4. Distorted picture?  
-A4. Please use the video editing software to modify the original video to match the screen.
+### Management app shows "Module Inactive" under LSPatch?
+Fixed in v5.0+. The management app and target app run in separate processes — the management app does not need an Xposed environment.
 
-Q5. `disable.jpg` invalid?  
-A5. If the application version `<=4.0`, then the control files in the `[INTERNEL_STORAGE]/DCIM/Camera1` directory will take effect for the applications that **have access to storage permissions**, and for the rest of the applications without permission, control files should be created in the **private directory**  
-If the app version `>=4.1`, it should be created in `[INTERNEL_STORAGE]/DCIM/Camera1` regardless of whether the target app has permissions.
+---
 
-## Question report:
+## Development
 
-raise it in issues directly. If it is a bug, please attach with Xposed **modules** log.
+```bash
+# Clone
+git clone https://github.com/Yaahua/vcam.git
 
-## Credit
+# Requirements
+# JDK 17+, Gradle 8.4, AGP 8.2.2
 
-Provide hook method: https://github.com/wangwei1237/CameraHook
+# Build
+./gradlew assembleRelease
+```
 
-H.264 hardware decode： https://github.com/zhantong/Android-VideoToImages
+For detailed development log and troubleshooting, see [docs/DEVELOPMENT_LOG.md](./docs/DEVELOPMENT_LOG.md)
 
-JPEG-YUV convert： https://blog.csdn.net/jacke121/article/details/73888732  
+### Tech Stack
+
+| Component | Version |
+|-----------|---------|
+| Gradle | 8.4 |
+| AGP | 8.2.2 |
+| Kotlin | 1.9.22 |
+| Jetpack Compose BOM | 2024.04.00 |
+| Xposed API | 82 (compileOnly) |
+
+---
+
+## Credits
+
+- Hook methodology：[CameraHook](https://github.com/wangwei1237/CameraHook)
+- H.264 hardware decoding：[Android-VideoToImages](https://github.com/zhantong/Android-VideoToImages)
+- JPEG-YUV conversion：[CSDN Blog](https://blog.csdn.net/jacke121/article/details/73888732)
+
+---
+
+## License
+
+This project is for educational and research purposes only. Users must comply with local laws and regulations. The author assumes no liability for any use of this project.

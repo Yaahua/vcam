@@ -1,73 +1,135 @@
-# android_virtual_cam
+# VCAM — 安卓虚拟摄像头
 
 [简体中文](./README.md) | [繁體中文](./README_tc.md) | [English](./README_en.md)
 
-基于Xposed的虚拟摄像头
+基于 Xposed / LSPosed / LSPatch 的虚拟摄像头模块，可替换任意应用的相机画面和麦克风输入。
 
-# 请勿用于任何非法用途，所有后果自负。
+> ⚠️ **请勿用于任何非法用途，所有后果自负。**
 
-### 中国大陆加速地址（Gitee平台）： https://gitee.com/w2016561536/android_virtual_cam
+---
 
-## 支持平台：
+## 特性
 
-- 安卓5.0+
+- 🎥 **视频替换** — 用本地视频/网络流替换摄像头预览和拍照
+- 🎤 **麦克风控制** — 静音、音频替换、视频原声三种模式
+- 📸 **拍照替换** — 拦截拍照请求，注入自定义图片
+- 🔀 **随机播放** — 从视频列表中随机选择播放
+- 🔔 **通知栏控制** — 下拉通知栏快速切换视频
+- 🌐 **网络流支持** — 支持 RTSP/RTMP/HLS 等流媒体源
+- 📱 **Jetpack Compose 界面** — Material3 现代化 UI
+- 🔧 **LSPatch 兼容** — 免 Root 注入，无需 Xposed 框架
 
-## 使用方法
+---
 
-1. 安装此模块，并在Xposed中启用此模块，Lsposed等包含作用域的框架需要选择目标app，无需选择系统框架。
-   
-2. 在系统设置中，授予目标应用读取本地存储的权限，并强制结束目标应用程序。若应用程序未申请此权限，请见步骤3。
-   
-3. 打开目标应用，若应用未能获得读取存储的权限，则会以气泡消息提示，`Camera1`目录被重定向至应用程序私有目录`/[内部存储]/Android/data/[应用包名]/files/Camera1/`。若未提示，则默认`Camera1`目录为`/[内部存储]/DCIM/Camera1/`。若目录不存在，请手动创建。
+## 支持平台
 
-> 注意：私有目录下的`Camera1`仅对该应用单独生效。
+| 框架 | 方式 | 需要 Root |
+|------|------|-----------|
+| LSPatch | APK 免 Root 注入 | ❌ 否 |
+| LSPosed | Xposed 模块加载 | ✅ 是 |
+| EdXposed | Xposed 模块加载 | ✅ 是 |
+| 传统 Xposed | Xposed 模块加载 | ✅ 是 |
 
-4. 在目标应用中打开相机预览，会以气泡消息提示“宽：……高：……”，需要根据此分辨率数据制作替换视频，放置于`Camera1`目录下，并命名为`virtual.mp4`，若打开相机并无提示消息，则无需调整视频分辨率。
-   
-5. 若在目标应用中拍照却显示真实图片，且出现气泡消息`发现拍照`和分辨率，则需根据此分辨率数据准备一张照片，命名为`1000.bmp`，放入`Camera1`目录下（支持其它格式改后缀为bmp）。如果拍照时无气泡消息提示，则`1000.bmp`无效。
-   
-6. 如果需要播放视频的声音，需在`/[内部存储]/DCIM/Camera1/`目录下创建`no-silent.jpg`文件。（全局实时生效）
-   
-7. 如果需要临时停用视频替换，需在`/[内部存储]/DCIM/Camera1/`目录下创建`disable.jpg`文件。（全局实时生效）
+- Android 5.0+
+- 支持 Camera1 和 Camera2 API
+- 支持 H.264/H.265 硬件解码
 
-8. 如果觉得Toast消息烦，可以在`/[内部存储]/DCIM/Camera1/`目录下创建`no_toast.jpg`文件。（全局实时生效）
+---
 
-9. 目录重定向消息默认只显示一次，如果错过了目录重定向的Toast消息，可以在`/[内部存储]/DCIM/Camera1/`目录下创建`force_show.jpg`文件来覆盖默认设定。（全局实时生效）
+## 快速开始
 
-10. 如果需要为每一个应用程序分配视频，可以在`/[内部存储]/DCIM/Camera1/`目录下创建`private_dir.jpg`强制使用应用程序私有目录。（全局实时生效）
+### 安装
 
-> 注意：6~10的配置开关均在应用程序中，您可以快捷地在应用程序中配置，也可以手动创建文件。
+1. **LSPatch（免 Root 推荐）**：在 LSPatch Manager 中加载本模块 APK，选择目标应用，注入后生效
+2. **LSPosed**：在 LSPosed 管理器的作用域中勾选目标应用，重启目标应用
+3. **传统 Xposed**：在 Xposed Installer 中启用模块，重启手机
+
+### 使用
+
+1. 授予目标应用「读取本地存储」权限，强制停止目标应用
+2. 打开目标应用，进入相机预览，会弹出分辨率提示（如「宽：1920 高：1080」）
+3. 根据提示分辨率准备替换视频，命名为 `virtual.mp4`，放入 `Camera1` 目录：
+   - 有存储权限：`/内部存储/DCIM/Camera1/virtual.mp4`
+   - 无存储权限：`/内部存储/Android/data/[应用包名]/files/Camera1/virtual.mp4`
+4. 重新打开目标应用，相机画面已被替换
+
+### 控制文件（全局实时生效）
+
+| 文件名 | 作用 | 路径 |
+|--------|------|------|
+| `no-silent.jpg` | 播放视频声音 | `DCIM/Camera1/` |
+| `disable.jpg` | 临时禁用替换 | `DCIM/Camera1/` |
+| `no_toast.jpg` | 关闭气泡提示 | `DCIM/Camera1/` |
+| `force_show.jpg` | 强制显示目录提示 | `DCIM/Camera1/` |
+| `private_dir.jpg` | 强制使用私有目录 | `DCIM/Camera1/` |
+
+> 💡 上述开关也可在 VCAM 管理 App 中通过界面直接配置，无需手动创建文件。
+
+---
+
+## App 界面
+
+VCAM 管理 App 基于 Jetpack Compose Material3 构建，提供三页式布局：
+
+- **首页** — 模块状态、播放模式、麦克风模式、视频声音、通知状态一目了然
+- **管理** — 视频/音频文件管理，支持导入、选择、删除
+- **设置** — 常规设置（随机播放、声音、麦克风 Hook 等）、高级设置（强制私有目录、禁用 Toast 等）、网络流设置
+
+---
 
 ## 常见问题
 
-A1. 前置摄像头方向问题？  
-Q1. 大多数情况下,替换前置摄像头的视频需要水平翻转并右旋90度，并且视频***处理后***的分辨率应与气泡消息内分辨率相同。但有时这并不需要，具体请根据实际情况判断。
+### 前置摄像头方向不对？
+替换前置摄像头的视频通常需要水平翻转 + 右旋 90°，处理后分辨率需与提示一致。
 
+### 黑屏/启动失败？
+- 确认视频路径正确（只需一级 `Camera1` 目录）
+- 部分系统相机无法 Hook
+- 检查视频编码格式是否支持
 
-Q2. 画面黑屏，相机启动失败？  
-A2. 目前有些应用并不能成功替换（特别是系统相机）。或者是因为视频路径不对（是否创建了两级Camera1目录，如`./DCIM/Camera1/Camera1/virtual.mp4`，但只需要一级目录）。
+### 画面花屏/扭曲？
+视频分辨率与提示分辨率不匹配，请调整视频后重试。
 
+### LSPatch 下管理 App 显示"模块未激活"？
+v5.0+ 已修复。管理 App 和目标 App 运行在不同进程，管理 App 无需 Xposed 环境。
 
-Q3. 画面花屏？  
-A3. 视频分辨率不对。
+---
 
-Q4. 画面扭曲，变形？  
-A4. 请使用剪辑软件修改原视频来匹配屏幕。
+## 开发
 
-Q5. 创建`disable.jpg`无效？  
-A5. 如果应用版本`<=4.0`，那么`[内部存储]/DCIM/Camera1`目录下的文件对**具有访问存储权限**的应用生效，其余无权限应用应在**私有目录**下创建  
-如果应用版本`>=4.1`，那么应在`[内部存储]/DCIM/Camera1`创建，无论目标应用是否具有权限。
+```bash
+# 克隆
+git clone https://github.com/Yaahua/vcam.git
 
+# 构建要求
+# JDK 17+, Gradle 8.4, AGP 8.2.2
 
-## 反馈问题
+# 构建
+./gradlew assembleRelease
+```
 
-请直接在issues中反馈，如果为BUG反馈，请附带Xposed**模块**日志信息。
+详细开发日志和踩坑记录见 [docs/DEVELOPMENT_LOG.md](./docs/DEVELOPMENT_LOG.md)
 
+### 技术栈
 
-## 致谢:
+| 组件 | 版本 |
+|------|------|
+| Gradle | 8.4 |
+| AGP | 8.2.2 |
+| Kotlin | 1.9.22 |
+| Jetpack Compose BOM | 2024.04.00 |
+| Xposed API | 82 (compileOnly) |
 
-提供HOOK思路: https://github.com/wangwei1237/CameraHook  
+---
 
-H264硬解码： https://github.com/zhantong/Android-VideoToImages  
+## 致谢
 
-JPEG转YUV： https://blog.csdn.net/jacke121/article/details/73888732  
+- Hook 思路：[CameraHook](https://github.com/wangwei1237/CameraHook)
+- H.264 硬解码：[Android-VideoToImages](https://github.com/zhantong/Android-VideoToImages)
+- JPEG-YUV 转换：[CSDN Blog](https://blog.csdn.net/jacke121/article/details/73888732)
+
+---
+
+## License
+
+本项目仅供学习研究使用。使用者需遵守当地法律法规，作者不承担任何因使用本项目产生的法律责任。
