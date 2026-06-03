@@ -1,23 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VCAM</string>
-    <string name="click_to_go_to_repo">click to go to repository</string>
-    <string name="description">Please go to online repository to check for latest update, latest usage and report bugs</string>
-    <string name="Warning">DO NOT USE FOR ANY ILLEGAL PURPOSE !!YOU NEED TO TAKE ALL RESPONSIBILITY AND CONSEQUENCE!!</string>
-    <string name="switch1">Force to show permission lack warning</string>
-    <string name="switch2">Disable the module temporarily (On is disable)</string>
-    <string name="switch3">Play sounds of videos</string>
-    <string name="switch4">Force every app use private directory</string>
-    <string name="gitee" translatable="false">Gitee platform</string>
-    <string name="switch5">Disable toast message</string>
-    <string name="permission_lack_warn">Missing permissions</string>
-    <string name="permission_description">The permission to access local storage is used to set up configuration files. If refused you need to set up file manually.</string>
-    <string name="positive">Sure</string>
-    <string name="negative">Refuse</string>
-    <string name="notif_channel_name">VCAM Control</string>
-    <string name="notif_channel_desc">Notification controls for VCAM module</string>
-    <string name="notif_content">VCAM is active - tap to open</string>
-    <string name="notif_action_prev">Prev</string>
-    <string name="notif_action_next">Next</string>
-    <string name="notif_action_exit">Exit</string>
+    <string name="module_description">安卓虚拟摄像头</string>
+    <string name="description">请访问在线仓库查看最新更新</string>
+    <string name="Warning">严禁用于任何非法用途！！</string>
+
+    <!-- Permission -->
+    <string name="permission_switch_text">授予本地存储权限</string>
+    <string name="permission_lack_warn">缺少必要权限</string>
+    <string name="permission_description">访问本地存储的权限用于设置配置文件。</string>
+    <string name="positive">确定</string>
+    <string name="negative">拒绝</string>
+
+    <!-- Home Screen Status -->
+    <string name="status_no_permission">无权限</string>
+    <string name="status_working">工作中</string>
+    <string name="status_paused">已暂停</string>
+    <string name="status_module_inactive">模块未激活</string>
+    <string name="status_activate_hint">请在 Xposed 管理器中激活模块后重启</string>
+    <string name="status_grant_permission">授予权限</string>
+    <string name="status_label_play_mode">播放模式</string>
+    <string name="status_label_mic">麦克风</string>
+    <string name="status_label_video_sound">视频原声</string>
+    <string name="status_label_notification">通知控制</string>
+    <string name="status_value_on">开启</string>
+    <string name="status_value_off">关闭</string>
+    <string name="status_value_random_play">随机播放</string>
+    <string name="status_value_sequential_play">顺序播放</string>
+    <string name="status_value_mic_mute">静音</string>
+    <string name="status_value_mic_replace">音频替换</string>
+    <string name="status_value_mic_sync">视频同步</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_category_general">常规设置</string>
+    <string name="settings_notification_control">启用通知栏控制</string>
+    <string name="settings_notification_control_desc">在通知栏快速切换视频</string>
+    <string name="settings_play_sound">播放声音</string>
+    <string name="settings_play_sound_desc">替换视频时播放原声音频</string>
+    <string name="settings_mic_hook">麦克风 Hook</string>
+    <string name="settings_mic_hook_desc">Hook 麦克风输入</string>
+    <string name="mic_mode_mute">静音模式</string>
+    <string name="mic_mode_mute_desc">输出静音数据</string>
+    <string name="mic_mode_replace">音频替换</string>
+    <string name="mic_mode_replace_desc">注入自定义音频文件</string>
+    <string name="mic_mode_video_sync">视频同步</string>
+    <string name="mic_mode_video_sync_desc">播放视频原声音轨</string>
+    <string name="settings_random_play">随机播放</string>
+    <string name="settings_random_play_desc">从视频列表中随机选择</string>
+    <string name="settings_category_advanced">高级设置</string>
+    <string name="settings_force_private_dir">强制私有目录</string>
+    <string name="settings_force_private_dir_desc">解决部分应用无法读取文件</string>
+    <string name="settings_disable_toast">禁用Toast</string>
+    <string name="settings_disable_toast_desc">隐藏所有操作提示</string>
+    <string name="settings_enable_photo_fake">启用拍照替换</string>
+    <string name="settings_enable_photo_fake_desc">动态拦截拍照请求注入视频帧</string>
+    <string name="settings_disable_module">禁用模块</string>
+    <string name="settings_disable_module_desc">暂时禁用所有Hook功能</string>
+    <string name="settings_system_permission">系统权限设置</string>
+    <string name="settings_system_permission_desc">管理存储和通知权限</string>
+
+    <!-- Stream Settings -->
+    <string name="settings_category_stream">网络流设置</string>
+    <string name="settings_media_source_type">媒体源类型</string>
+    <string name="settings_media_source_local">本地文件</string>
+    <string name="settings_media_source_stream">网络流</string>
+    <string name="settings_stream_url">流地址</string>
+    <string name="settings_stream_url_hint">输入 rtsp:// rtmp:// 等地址</string>
+    <string name="settings_stream_auto_reconnect">自动重连</string>
+    <string name="settings_stream_auto_reconnect_desc">流断开后自动重连</string>
+    <string name="settings_stream_local_fallback">本地兜底</string>
+    <string name="settings_stream_local_fallback_desc">流不可用时回退本地视频</string>
+    <string name="settings_stream_transport_hint">RTSP 传输协议</string>
+    <string name="settings_stream_transport_auto">自动</string>
+    <string name="settings_stream_transport_tcp">TCP</string>
+    <string name="settings_stream_transport_udp">UDP</string>
+    <string name="settings_stream_timeout">连接超时</string>
+
+    <!-- Navigation -->
+    <string name="nav_home">首页</string>
+    <string name="nav_settings">设置</string>
+
+    <!-- About -->
+    <string name="about_title">关于</string>
+    <string name="about_app_name">VCAM</string>
+    <string name="about_desc">基于 Xposed 框架的虚拟摄像头模块</string>
+    <string name="support_title">支持</string>
+    <string name="support_github">在 GitHub 查看、反馈</string>
+
+    <!-- Misc -->
+    <string name="config_migrated">配置已自动迁移</string>
+
+    <!-- Notification -->
+    <string name="notif_content">VCAM 通知栏控制</string>
+    <string name="notif_action_prev">上一条</string>
+    <string name="notif_action_next">下一条</string>
+    <string name="notif_action_exit">退出</string>
+    <string name="notif_channel_name">VCAM控制服务</string>
+    <string name="notif_channel_desc">显示VCAM视频切换控制</string>
 </resources>
