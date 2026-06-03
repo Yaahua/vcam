@@ -84,6 +84,9 @@ public class MainActivity extends Activity {
 
         btnRefresh.setOnClickListener(v -> refreshDebugInfo());
 
+        // 打开应用时自动请求存储权限（直接弹系统对话框）
+        autoRequestStoragePermission();
+
         sync_statue_with_files();
 
         repo_button.setOnClickListener(v -> {
@@ -282,6 +285,31 @@ public class MainActivity extends Activity {
             File old = new File(Environment.getExternalStorageDirectory().getAbsolutePath() + "/DCIM/Camera1/" + fileName);
             if (old.exists()) old.delete();
         } catch (Exception ignored) {}
+    }
+
+    private void autoRequestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            boolean needRead = this.checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    == PackageManager.PERMISSION_DENIED;
+            // Android 13+ 用细粒度媒体权限
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                boolean needVideo = this.checkSelfPermission(Manifest.permission.READ_MEDIA_VIDEO)
+                        == PackageManager.PERMISSION_DENIED;
+                boolean needImages = this.checkSelfPermission(Manifest.permission.READ_MEDIA_IMAGES)
+                        == PackageManager.PERMISSION_DENIED;
+                if (needVideo || needImages) {
+                    requestPermissions(
+                        new String[]{Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_IMAGES},
+                        1);
+                    return;
+                }
+            }
+            if (needRead) {
+                requestPermissions(
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    1);
+            }
+        }
     }
 
     private void request_permission() {
