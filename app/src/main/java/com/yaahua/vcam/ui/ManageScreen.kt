@@ -165,7 +165,7 @@ private fun MediaCard(
     onDelete: () -> Unit
 ) {
     Card(
-        elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 2.dp),
+        elevation = CardDefaults.elevation(if (isSelected) 4.dp else 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer
                              else MaterialTheme.colorScheme.surface

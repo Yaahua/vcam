@@ -278,7 +278,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp), shape = MaterialTheme.shapes.large) {
+    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), elevation = CardDefaults.elevation(defaultElevation = 2.dp), shape = MaterialTheme.shapes.large) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(title, style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp), color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(12.dp))
@@ -337,5 +337,5 @@ private fun TransportOption(title: String, selected: Boolean, onClick: () -> Uni
 
 @Composable
 private fun SettingsDivider() {
-    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f), modifier = Modifier.padding(start = 36.dp))
+    Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f), modifier = Modifier.padding(start = 36.dp))
 }
