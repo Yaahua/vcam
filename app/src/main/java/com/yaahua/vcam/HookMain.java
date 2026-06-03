@@ -127,7 +127,11 @@ public class HookMain implements IXposedHookLoadPackage {
         Camera2Handler.init(lpparam);
 
         // ========== 委托 Microphone Handler ==========
-        MicrophoneHandler.init(lpparam);
+        try {
+            MicrophoneHandler.init(lpparam);
+        } catch (Throwable e) {
+            XposedBridge.log("【VCAM】MicrophoneHandler 初始化失败: " + e);
+        }
 
         // ========== 配置变更监听：广播 + 文件监控 → 热切换视频/声音 ==========
         if (!lpparam.packageName.equals(BuildConfig.APPLICATION_ID)) {

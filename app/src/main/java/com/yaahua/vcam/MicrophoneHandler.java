@@ -110,7 +110,7 @@ public class MicrophoneHandler {
             });
 
             XposedBridge.log("【VCAM】Microphone AudioRecord Hook 已安装");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             XposedBridge.log("【VCAM】Microphone AudioRecord Hook 失败: " + e);
         }
     }
@@ -171,7 +171,7 @@ public class MicrophoneHandler {
                     XposedBridge.log("【VCAM】MediaRecorder.setAudioSource: " + param.args[0]);
                 }
             });
-        } catch (Exception e) {
+        } catch (Throwable e) {
             XposedBridge.log("【VCAM】MediaRecorder.setAudioSource Hook 失败: " + e);
         }
     }
