@@ -15,7 +15,7 @@ public class HookGuards {
 
     private static long configFileLastModified = 0;
 
-    private static ConfigManager getConfig() {
+    public static ConfigManager getConfig() {
         if (configManager == null) {
             configManager = new ConfigManager(false);
             configManager.reload();
