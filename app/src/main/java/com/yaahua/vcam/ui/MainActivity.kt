@@ -40,6 +40,7 @@ import java.io.File
 class MainActivity : ComponentActivity() {
 
     private val mainViewModel: MainViewModel by viewModels()
+    private val mediaViewModel: MediaViewModel by viewModels()
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -79,7 +80,7 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun MainApp() {
         val navController = rememberNavController()
-        val items = listOf(Screen.Home, Screen.Settings)
+        val items = listOf(Screen.Home, Screen.Manage, Screen.Settings)
 
         Scaffold(
             topBar = {
@@ -90,6 +91,23 @@ class MainActivity : ComponentActivity() {
                             title = {
                                 Text(
                                     text = stringResource(id = R.string.app_name),
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                )
+                            },
+                            colors = TopAppBarDefaults.topAppBarColors(
+                                containerColor = MaterialTheme.colorScheme.background,
+                                titleContentColor = MaterialTheme.colorScheme.onBackground
+                            )
+                        )
+                    }
+                    Screen.Manage.route -> {
+                        TopAppBar(
+                            title = {
+                                Text(
+                                    text = stringResource(Screen.Manage.titleResId),
                                     style = MaterialTheme.typography.titleLarge.copy(
                                         fontSize = 22.sp,
                                         fontWeight = FontWeight.Bold
@@ -143,6 +161,9 @@ class MainActivity : ComponentActivity() {
                         onPermissionRequest = { checkAndRequestPermissions() }
                     )
                 }
+                composable(Screen.Manage.route) {
+                    ManageScreen(viewModel = mediaViewModel)
+                }
                 composable(Screen.Settings.route) {
                     SettingsScreen(viewModel = mainViewModel)
                 }
@@ -154,6 +175,7 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         checkPermissionsStatus()
         mainViewModel.loadConfig()
+        mediaViewModel.loadMedia()
 
         val configManager = ConfigManager()
         if (configManager.getBoolean(ConfigManager.KEY_OVERLAY_CONTROL_ENABLED, false)

@@ -78,7 +78,14 @@
 
     <!-- Navigation -->
     <string name="nav_home">首页</string>
+    <string name="nav_manage">管理</string>
     <string name="nav_settings">设置</string>
+
+    <!-- Manage Screen -->
+    <string name="tab_video_manage">视频</string>
+    <string name="tab_audio_manage">音频</string>
+    <string name="desc_add_media">添加媒体</string>
+    <string name="status_no_audio">暂无音频文件</string>
 
     <!-- About -->
     <string name="about_title">关于</string>
