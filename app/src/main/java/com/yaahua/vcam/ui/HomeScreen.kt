@@ -108,7 +108,7 @@ fun StatusCard(
 
     Card(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.elevation(defaultElevation = 4.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         modifier = Modifier
             .fillMaxWidth()
             .wrapContentHeight()
@@ -269,7 +269,7 @@ fun SupportCard() {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        elevation = CardDefaults.elevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         modifier = Modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large
     ) {

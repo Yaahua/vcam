@@ -85,6 +85,7 @@
     <string name="tab_video_manage">视频</string>
     <string name="tab_audio_manage">音频</string>
     <string name="desc_add_media">添加媒体</string>
+    <string name="status_no_video">暂无视频文件</string>
     <string name="status_no_audio">暂无音频文件</string>
 
     <!-- About -->
