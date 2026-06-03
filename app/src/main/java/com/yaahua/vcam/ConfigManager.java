@@ -161,8 +161,10 @@ public class ConfigManager {
 
     private boolean reloadFromProvider() {
         android.net.Uri uri = IpcContract.URI_CONFIG;
+        XposedBridge.log("【DIAG】ConfigManager.reloadFromProvider 开始查询: " + uri);
         try (android.database.Cursor cursor = context.getContentResolver().query(uri, null, null, null, null)) {
             if (cursor != null) {
+                XposedBridge.log("【DIAG】ConfigManager.reloadFromProvider cursor count=" + cursor.getCount());
                 JSONObject newConfig = new JSONObject();
                 while (cursor.moveToNext()) {
                     String key = cursor.getString(0);
@@ -395,6 +397,7 @@ public class ConfigManager {
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
                 fos.write(snapshot.toString(4).getBytes(StandardCharsets.UTF_8));
             }
+            XposedBridge.log("【DIAG】ConfigManager.save → 文件已写入: " + configFile.getAbsolutePath() + " size=" + configFile.length());
             try {
                 configFile.setReadable(true, false);
                 configFile.setWritable(true, true);
@@ -404,10 +407,17 @@ public class ConfigManager {
             if (context != null) {
                 try {
                     context.getContentResolver().notifyChange(IpcContract.URI_CONFIG, null);
-                } catch (Exception ignored) {}
+                    XposedBridge.log("【DIAG】ConfigManager.save → notifyChange 已发送");
+                } catch (Exception e) {
+                    XposedBridge.log("【DIAG】ConfigManager.save → notifyChange 失败: " + e);
+                }
                 sendConfigBroadcast(context);
+                XposedBridge.log("【DIAG】ConfigManager.save → 广播已发送");
+            } else {
+                XposedBridge.log("【DIAG】ConfigManager.save → 跳过通知(context=null)");
             }
         } catch (Exception e) {
+            XposedBridge.log("【DIAG】ConfigManager.save → 写入失败: " + e);
             e.printStackTrace();
         }
     }

@@ -36,9 +36,11 @@ public final class ConfigWatcher {
         if (configObserver != null) return;
 
         LogUtil.log("【CS】初始化配置监听");
+        XposedBridge.log("【DIAG】ConfigWatcher.init → 开始, context=" + context.getPackageName());
         
         // ---- 确保 HookGuards 持有的 ConfigManager 有 Context（可走 Provider 跨进程读配置）----
         HookGuards.ensureConfigHasContext(context);
+        XposedBridge.log("【DIAG】ConfigWatcher.init → ensureConfigHasContext 完成");
 
         // ---- ContentObserver（Provider 变更）----
         configObserver = new android.database.ContentObserver(mainHandler) {
@@ -55,8 +57,9 @@ public final class ConfigWatcher {
         try {
             context.getContentResolver().registerContentObserver(IpcContract.URI_CONFIG, true, configObserver);
             observerRegistered = true;
+            XposedBridge.log("【DIAG】ConfigWatcher.init → ContentObserver 注册成功: " + IpcContract.URI_CONFIG);
         } catch (Exception e) {
-            LogUtil.log("【CS】注册 ContentObserver 失败: " + e);
+            XposedBridge.log("【DIAG】ConfigWatcher.init → ContentObserver 注册失败: " + e);
         }
 
         if (!observerRegistered) {
@@ -89,6 +92,7 @@ public final class ConfigWatcher {
         registerBroadcastReceiver(context);
 
         // ---- 兜底：定时文件轮询（5秒间隔），防止 ContentObserver/FileObserver 都失效 ----
+        XposedBridge.log("【DIAG】ConfigWatcher.init → 启动文件轮询兜底");
         mainHandler.postDelayed(new Runnable() {
             private long lastMtime = new java.io.File(ConfigManager.DEFAULT_CONFIG_DIR,
                     ConfigManager.CONFIG_FILE_NAME).lastModified();
@@ -98,12 +102,14 @@ public final class ConfigWatcher {
                     long mtime = new java.io.File(ConfigManager.DEFAULT_CONFIG_DIR,
                             ConfigManager.CONFIG_FILE_NAME).lastModified();
                     if (mtime > lastMtime) {
+                        XposedBridge.log("【DIAG】ConfigWatcher.poll → mtime变更(" + lastMtime + "→" + mtime + "), 触发回调");
                         lastMtime = mtime;
-                        LogUtil.log("【CS】轮询检测到配置变更");
                         HookGuards.invalidateConfig();
                         fireCallback();
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    XposedBridge.log("【DIAG】ConfigWatcher.poll → 异常: " + e);
+                }
                 mainHandler.postDelayed(this, 5000);
             }
         }, 5000);
@@ -111,12 +117,14 @@ public final class ConfigWatcher {
 
     /** 尾随执行防抖：每次调用重置计时器，300ms 内无新事件才真正执行回调 */
     private void fireCallback() {
+        XposedBridge.log("【DIAG】ConfigWatcher.fireCallback 被调用");
         if (pendingCallback != null) {
             mainHandler.removeCallbacks(pendingCallback);
         }
         pendingCallback = new Runnable() {
             @Override
             public void run() {
+                XposedBridge.log("【DIAG】ConfigWatcher → 防抖结束, 触发 onMediaSourceChanged");
                 pendingCallback = null;
                 callback.onMediaSourceChanged();
             }

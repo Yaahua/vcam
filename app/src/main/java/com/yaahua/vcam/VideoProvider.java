@@ -17,6 +17,15 @@ import java.util.Set;
 public class VideoProvider extends ContentProvider {
     private ConfigManager configManager;
 
+    private String getCallingPackageSafe() {
+        try {
+            String[] pkgs = getContext().getPackageManager().getPackagesForUid(Binder.getCallingUid());
+            return (pkgs != null && pkgs.length >0) ? pkgs[0] : "uid=" + Binder.getCallingUid();
+        } catch (Exception e) {
+            return "error";
+        }
+    }
+
     private boolean isCallerAllowed() {
         return isCallerAllowed(false);
     }
@@ -61,7 +70,11 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        if (!isCallerAllowed()) return null;
+        XposedBridge.log("【DIAG】VideoProvider.query → uri=" + uri + " caller=" + getCallingPackageSafe());
+        if (!isCallerAllowed()) {
+            XposedBridge.log("【DIAG】VideoProvider.query → 被拒绝");
+            return null;
+        }
         String lastPathSegment = uri.getLastPathSegment();
         if (IpcContract.PATH_CONFIG.equals(lastPathSegment)) {
             configManager.reload();
@@ -192,7 +205,9 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
+        XposedBridge.log("【DIAG】VideoProvider.call → method=" + method);
         if (!isCallerAllowed(true)) {
+            XposedBridge.log("【DIAG】VideoProvider.call → 写操作被拒绝");
             Bundle denied = new Bundle();
             denied.putBoolean(IpcContract.EXTRA_CHANGED, false);
             return denied;
