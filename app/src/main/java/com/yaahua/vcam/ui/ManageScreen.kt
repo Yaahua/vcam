@@ -17,11 +17,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import com.yaahua.vcam.R
 import java.io.File
 import java.util.Locale
@@ -160,6 +166,7 @@ fun ManageScreen(viewModel: MediaViewModel) {
                                 name = video.name,
                                 sizeMb = video.size / 1048576.0,
                                 durationMs = video.durationMs,
+                                videoPath = video.file.absolutePath,
                                 isSelected = isVideoSelected(video, uiState.selectedVideoName),
                                 isExternal = video.file.absolutePath.startsWith("/")
                                     && video.file.parent != "/storage/emulated/0/DCIM/Camera1",
@@ -252,8 +259,10 @@ private fun MediaCard(
     isExternal: Boolean,
     isAudio: Boolean,
     onSelect: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    videoPath: String? = null
 ) {
+    val context = LocalContext.current
     Card(
         elevation = CardDefaults.cardElevation(if (isSelected) 4.dp else 2.dp),
         colors = CardDefaults.cardColors(
@@ -266,13 +275,50 @@ private fun MediaCard(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                if (isAudio) Icons.Default.MusicNote else Icons.Default.VideoLibrary,
-                null,
-                tint = if (isSelected) MaterialTheme.colorScheme.primary
-                       else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(40.dp)
-            )
+            // 缩略图区域
+            if (isAudio) {
+                Icon(
+                    Icons.Default.MusicNote,
+                    null,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary
+                           else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(56.dp)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(MaterialTheme.shapes.small),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (videoPath != null) {
+                        val request = remember(videoPath) {
+                            ImageRequest.Builder(context)
+                                .data(videoPath)
+                                .videoFrameMillis(1000) // 取第1秒帧
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .crossfade(true)
+                                .size(112) // 2x for retina
+                                .build()
+                        }
+                        AsyncImage(
+                            model = request,
+                            contentDescription = name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(
+                            Icons.Default.VideoLibrary,
+                            null,
+                            tint = if (isSelected) MaterialTheme.colorScheme.primary
+                                   else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
