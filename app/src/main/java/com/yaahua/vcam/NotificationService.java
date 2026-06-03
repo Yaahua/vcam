@@ -11,6 +11,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.IBinder;
+import com.yaahua.vcam.ui.MainActivity;
 
 public class NotificationService extends Service {
     private static final String CHANNEL_ID = "vcam_control_channel";
