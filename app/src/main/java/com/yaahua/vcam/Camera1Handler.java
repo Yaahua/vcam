@@ -487,6 +487,10 @@ public class Camera1Handler {
     // ======================== 热切换：视频变更时重新加载播放器 ========================
     public static void reloadVideo() {
         HookGuards.getConfig().forceReload();
+        if (HookGuards.isDisabled()) {
+            stopAllPlayers();
+            return;
+        }
         File newFile = HookGuards.getVideoFile();
         String newPath = newFile.getAbsolutePath();
         boolean playSound = HookGuards.shouldPlaySound();
@@ -548,6 +552,39 @@ public class Camera1Handler {
         }
         if (SharedState.mplayer1 != null) {
             SharedState.mplayer1.setVolume(vol, vol);
+        }
+    }
+
+    // ======================== 停止所有播放器（禁用模块时调用） ========================
+    public static void stopAllPlayers() {
+        XposedBridge.log("【VCAM】Camera1 停止所有播放器/解码器");
+        try {
+            if (SharedState.mMediaPlayer != null) {
+                SharedState.mMediaPlayer.stop();
+                SharedState.mMediaPlayer.reset();
+                SharedState.mMediaPlayer.release();
+                SharedState.mMediaPlayer = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera1 stop mMediaPlayer: " + e);
+        }
+        try {
+            if (SharedState.mplayer1 != null) {
+                SharedState.mplayer1.stop();
+                SharedState.mplayer1.reset();
+                SharedState.mplayer1.release();
+                SharedState.mplayer1 = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera1 stop mplayer1: " + e);
+        }
+        try {
+            if (SharedState.hw_decode_obj != null) {
+                SharedState.hw_decode_obj.stopDecode();
+                SharedState.hw_decode_obj = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera1 stop hw_decode: " + e);
         }
     }
 }

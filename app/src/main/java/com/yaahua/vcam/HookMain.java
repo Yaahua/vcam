@@ -156,18 +156,28 @@ public class HookMain implements IXposedHookLoadPackage {
                 new ConfigWatcher(new ConfigWatcher.Callback() {
                     @Override
                     public void onMediaSourceChanged() {
-                        XposedBridge.log("【VCAM】配置监听 → 媒体源变更，触发热切换");
-                        try {
-                            Camera1Handler.reloadVideo();
-                        } catch (Exception e) {
-                            XposedBridge.log("【VCAM】Camera1 热切换异常: " + e);
-                        }
-                        try {
-                            Camera2SessionHook.reloadVideo();
-                        } catch (Exception e) {
-                            XposedBridge.log("【VCAM】Camera2 热切换异常: " + e);
-                        }
-                    }
+    XposedBridge.log("【VCAM】配置监听 → 媒体源变更，触发热切换");
+    try {
+        if (com.yaahua.vcam.HookGuards.isDisabled()) {
+            XposedBridge.log("【VCAM】模块已禁用，停止所有播放器");
+            com.yaahua.vcam.Camera1Handler.stopAllPlayers();
+            com.yaahua.vcam.Camera2SessionHook.stopAllPlayers();
+            return;
+        }
+    } catch (Exception e) {
+        XposedBridge.log("【VCAM】禁用检查异常: " + e);
+    }
+    try {
+        Camera1Handler.reloadVideo();
+    } catch (Exception e) {
+        XposedBridge.log("【VCAM】Camera1 热切换异常: " + e);
+    }
+    try {
+        Camera2SessionHook.reloadVideo();
+    } catch (Exception e) {
+        XposedBridge.log("【VCAM】Camera2 热切换异常: " + e);
+    }
+}
 
                     @Override
                     public void onRotationChanged(int degrees) {

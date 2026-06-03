@@ -362,6 +362,10 @@ public class Camera2SessionHook {
     // ======================== 热切换：视频变更时重新加载播放器 ========================
     public static void reloadVideo() {
         HookGuards.getConfig().forceReload();
+        if (HookGuards.isDisabled()) {
+            stopAllPlayers();
+            return;
+        }
         File newFile = HookGuards.getVideoFile();
         String newPath = newFile.getAbsolutePath();
         boolean playSound = HookGuards.shouldPlaySound();
@@ -446,6 +450,47 @@ public class Camera2SessionHook {
         }
         if (SharedState.c2_player_1 != null) {
             SharedState.c2_player_1.setVolume(vol, vol);
+        }
+    }
+
+    // ======================== 停止所有播放器（禁用模块时调用） ========================
+    public static void stopAllPlayers() {
+        XposedBridge.log("【VCAM】Camera2 停止所有播放器/解码器");
+        try {
+            if (SharedState.c2_player != null) {
+                SharedState.c2_player.stop();
+                SharedState.c2_player.reset();
+                SharedState.c2_player.release();
+                SharedState.c2_player = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera2 stop c2_player: " + e);
+        }
+        try {
+            if (SharedState.c2_player_1 != null) {
+                SharedState.c2_player_1.stop();
+                SharedState.c2_player_1.reset();
+                SharedState.c2_player_1.release();
+                SharedState.c2_player_1 = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera2 stop c2_player_1: " + e);
+        }
+        try {
+            if (SharedState.c2_hw_decode_obj != null) {
+                SharedState.c2_hw_decode_obj.stopDecode();
+                SharedState.c2_hw_decode_obj = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera2 stop hw_decode1: " + e);
+        }
+        try {
+            if (SharedState.c2_hw_decode_obj_1 != null) {
+                SharedState.c2_hw_decode_obj_1.stopDecode();
+                SharedState.c2_hw_decode_obj_1 = null;
+            }
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】Camera2 stop hw_decode2: " + e);
         }
     }
 }
