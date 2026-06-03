@@ -136,13 +136,13 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch(Dispatchers.IO) {
             configManager.reload()
             val current = configManager.getString(ConfigManager.KEY_SELECTED_VIDEO, null)
+            val targetPath = File(videoDir, name).absolutePath
             // 匹配逻辑：支持绝对路径与相对路径的相等比较
             val isSame = if (current != null) {
                 if (current.startsWith("/")) {
-                    // 当前是绝对路径：比较 name 是否匹配该路径的文件名，或完全相同
-                    current == name || File(current).name == name
+                    current == targetPath || File(current).name == name
                 } else {
-                    current == name
+                    current == name || current == targetPath
                 }
             } else false
 
@@ -150,8 +150,8 @@ class MediaViewModel(application: Application) : AndroidViewModel(application) {
                 configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, "")
                 _uiState.update { it.copy(selectedVideoName = null) }
             } else {
-                configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, name)
-                _uiState.update { it.copy(selectedVideoName = name) }
+                configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, targetPath)
+                _uiState.update { it.copy(selectedVideoName = targetPath) }
             }
         }
     }
