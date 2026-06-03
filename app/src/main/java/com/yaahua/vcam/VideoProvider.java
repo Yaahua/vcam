@@ -70,9 +70,9 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder) {
-        XposedBridge.log("【DIAG】VideoProvider.query → uri=" + uri + " caller=" + getCallingPackageSafe());
+        LogUtil.log("【DIAG】VideoProvider.query → uri=" + uri + " caller=" + getCallingPackageSafe());
         if (!isCallerAllowed()) {
-            XposedBridge.log("【DIAG】VideoProvider.query → 被拒绝");
+            LogUtil.log("【DIAG】VideoProvider.query → 被拒绝");
             return null;
         }
         String lastPathSegment = uri.getLastPathSegment();
@@ -205,9 +205,9 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
-        XposedBridge.log("【DIAG】VideoProvider.call → method=" + method);
+        LogUtil.log("【DIAG】VideoProvider.call → method=" + method);
         if (!isCallerAllowed(true)) {
-            XposedBridge.log("【DIAG】VideoProvider.call → 写操作被拒绝");
+            LogUtil.log("【DIAG】VideoProvider.call → 写操作被拒绝");
             Bundle denied = new Bundle();
             denied.putBoolean(IpcContract.EXTRA_CHANGED, false);
             return denied;

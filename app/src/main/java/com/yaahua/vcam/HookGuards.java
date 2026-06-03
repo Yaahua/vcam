@@ -23,17 +23,17 @@ public class HookGuards {
     /** 确保 ConfigManager 持有有效的 Context（用于 Provider 跨进程读配置）。 */
     public static void ensureConfigHasContext(android.content.Context context) {
         if (context == null) {
-            XposedBridge.log("【DIAG】ensureConfigHasContext → context 为null, 跳过");
+            LogUtil.log("【DIAG】ensureConfigHasContext → context 为null, 跳过");
             return;
         }
-        XposedBridge.log("【DIAG】ensureConfigHasContext → 注入context: " + context.getPackageName());
+        LogUtil.log("【DIAG】ensureConfigHasContext → 注入context: " + context.getPackageName());
         if (configManager == null) {
             configManager = new ConfigManager(false);
-            XposedBridge.log("【DIAG】ensureConfigHasContext → 新建 ConfigManager");
+            LogUtil.log("【DIAG】ensureConfigHasContext → 新建 ConfigManager");
         }
         configManager.setSkipProviderReload(false);
         configManager.setContext(context);
-        XposedBridge.log("【DIAG】ensureConfigHasContext → 完成, configManager已就绪");
+        LogUtil.log("【DIAG】ensureConfigHasContext → 完成, configManager已就绪");
     }
 
     private static long configFileLastModified = 0;
@@ -42,20 +42,20 @@ public class HookGuards {
 
     public static ConfigManager getConfig() {
         if (configManager == null) {
-            XposedBridge.log("【DIAG】HookGuards.getConfig → 首次创建");
+            LogUtil.log("【DIAG】HookGuards.getConfig → 首次创建");
             configManager = new ConfigManager(false);
             configManager.reload();
             configFileLastModified = getConfigFileMtime();
             configDirty = false;
         } else if (configDirty) {
-            XposedBridge.log("【DIAG】HookGuards.getConfig → configDirty, forceReload");
+            LogUtil.log("【DIAG】HookGuards.getConfig → configDirty, forceReload");
             configManager.forceReload();
             configFileLastModified = getConfigFileMtime();
             configDirty = false;
         } else {
             long currentMtime = getConfigFileMtime();
             if (currentMtime > configFileLastModified) {
-                XposedBridge.log("【DIAG】HookGuards.getConfig → mtime变更, forceReload");
+                LogUtil.log("【DIAG】HookGuards.getConfig → mtime变更, forceReload");
                 configManager.forceReload();
                 configFileLastModified = currentMtime;
             }
@@ -76,37 +76,37 @@ public class HookGuards {
         ConfigManager config = getConfig();
         String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         File dir = new File(SharedState.video_path);
-        XposedBridge.log("【DIAG】getVideoFile → dir=" + dir.getAbsolutePath() + " selected=" + selectedName);
+        LogUtil.log("【DIAG】getVideoFile → dir=" + dir.getAbsolutePath() + " selected=" + selectedName);
         if (selectedName != null && !selectedName.isEmpty()) {
             // 支持绝对路径
             if (selectedName.startsWith("/")) {
                 File absolute = new File(selectedName);
-                XposedBridge.log("【DIAG】getVideoFile → 尝试绝对路径: " + absolute.getAbsolutePath());
+                LogUtil.log("【DIAG】getVideoFile → 尝试绝对路径: " + absolute.getAbsolutePath());
                 try {
                     if (absolute.exists() && !absolute.isDirectory()) {
-                        XposedBridge.log("【DIAG】getVideoFile → 命中绝对路径: " + absolute.getName());
+                        LogUtil.log("【DIAG】getVideoFile → 命中绝对路径: " + absolute.getName());
                         return absolute;
                     }
-                    XposedBridge.log("【DIAG】getVideoFile → 绝对路径不存在: " + absolute.getAbsolutePath());
+                    LogUtil.log("【DIAG】getVideoFile → 绝对路径不存在: " + absolute.getAbsolutePath());
                 } catch (SecurityException e) {
-                    XposedBridge.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
+                    LogUtil.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
                     return absolute;
                 }
             }
             File selected = new File(dir, selectedName);
-            XposedBridge.log("【DIAG】getVideoFile → 尝试相对路径: " + selected.getAbsolutePath());
+            LogUtil.log("【DIAG】getVideoFile → 尝试相对路径: " + selected.getAbsolutePath());
             try {
                 if (selected.exists() && !selected.isDirectory()) {
-                    XposedBridge.log("【DIAG】getVideoFile → 命中相对路径: " + selected.getName());
+                    LogUtil.log("【DIAG】getVideoFile → 命中相对路径: " + selected.getName());
                     return selected;
                 }
-                XposedBridge.log("【DIAG】getVideoFile → 相对路径不存在: " + selected.getAbsolutePath());
+                LogUtil.log("【DIAG】getVideoFile → 相对路径不存在: " + selected.getAbsolutePath());
             } catch (SecurityException e) {
-                XposedBridge.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
+                LogUtil.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
                 return selected;
             }
         } else {
-            XposedBridge.log("【DIAG】getVideoFile → selectedName 为空, 走fallback");
+            LogUtil.log("【DIAG】getVideoFile → selectedName 为空, 走fallback");
         }
         // 回退：目录中任意视频（支持四种格式）
         try {
@@ -118,14 +118,14 @@ public class HookGuards {
                 return false;
             });
             if (files != null && files.length > 0) {
-                XposedBridge.log("【DIAG】getVideoFile → fallback 找到 " + files.length + " 个视频, 取第一个: " + files[0].getName());
+                LogUtil.log("【DIAG】getVideoFile → fallback 找到 " + files.length + " 个视频, 取第一个: " + files[0].getName());
                 return files[0];
             }
-            XposedBridge.log("【DIAG】getVideoFile → fallback listFiles 返回空");
+            LogUtil.log("【DIAG】getVideoFile → fallback listFiles 返回空");
         } catch (SecurityException e) {
-            XposedBridge.log("【DIAG】getVideoFile → fallback listFiles 抛异常: " + e);
+            LogUtil.log("【DIAG】getVideoFile → fallback listFiles 抛异常: " + e);
         }
-        XposedBridge.log("【DIAG】getVideoFile → 最终回退到 virtual.mp4");
+        LogUtil.log("【DIAG】getVideoFile → 最终回退到 virtual.mp4");
         return new File(dir, "virtual.mp4");
     }
 
