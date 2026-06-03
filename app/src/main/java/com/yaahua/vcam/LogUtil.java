@@ -1,17 +1,38 @@
 package com.yaahua.vcam;
 
-import de.robv.android.xposed.XposedBridge;
+import android.util.Log;
 
 /**
- * 日志工具 - 当前阶段委托给 XposedBridge.log。
- * 后续可替换为独立日志系统。
+ * 日志工具 - Xposed 环境用 XposedBridge.log，普通环境回退到 android.util.Log。
  */
 public class LogUtil {
     private static final String TAG = "【VCAM】";
 
+    private static volatile boolean xposedAvailable = false;
+    private static volatile boolean xposedChecked = false;
+
+    private static boolean isXposedAvailable() {
+        if (!xposedChecked) {
+            try {
+                Class.forName("de.robv.android.xposed.XposedBridge");
+                xposedAvailable = true;
+            } catch (ClassNotFoundException e) {
+                xposedAvailable = false;
+            }
+            xposedChecked = true;
+        }
+        return xposedAvailable;
+    }
+
     public static void log(String msg) {
         if (msg != null) {
-            XposedBridge.log(TAG + msg);
+            if (isXposedAvailable()) {
+                try {
+                    de.robv.android.xposed.XposedBridge.log(TAG + msg);
+                    return;
+                } catch (Throwable ignored) {}
+            }
+            Log.d(TAG, msg);
         }
     }
 
