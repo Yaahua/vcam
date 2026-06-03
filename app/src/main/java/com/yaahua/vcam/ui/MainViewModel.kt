@@ -23,7 +23,7 @@ data class MainUiState(
     val notificationControlEnabled: Boolean = false,
     val overlayControlEnabled: Boolean = false,
     val hasPermission: Boolean = false,
-    val isXposedActive: Boolean = false,
+    val isXposedActive: Boolean = true,
     val mediaSourceType: String = ConfigManager.MEDIA_SOURCE_LOCAL,
     val streamUrl: String = "",
     val streamAutoReconnect: Boolean = true,
@@ -39,7 +39,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     init {
         loadConfig()
-        checkXposed()
     }
 
     fun loadConfig() {
@@ -65,15 +64,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     streamTimeoutMs = configManager.getLong(ConfigManager.KEY_STREAM_TIMEOUT_MS, 8000L)
                 )
             }
-        }
-    }
-
-    private fun checkXposed() {
-        try {
-            Class.forName("de.robv.android.xposed.XposedBridge")
-            _uiState.update { it.copy(isXposedActive = true) }
-        } catch (_: ClassNotFoundException) {
-            _uiState.update { it.copy(isXposedActive = false) }
         }
     }
 
