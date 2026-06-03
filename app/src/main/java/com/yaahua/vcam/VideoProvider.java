@@ -216,9 +216,11 @@ public class VideoProvider extends ContentProvider {
 
         String selectedVideo = configManager.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         int currentIndex = -1;
-        if (selectedVideo != null) {
+        if (selectedVideo != null && !selectedVideo.isEmpty()) {
+            // 支持绝对路径：提取文件名用于在当前目录匹配
+            String searchName = selectedVideo.contains("/") ? new File(selectedVideo).getName() : selectedVideo;
             for (int i = 0; i < files.length; i++) {
-                if (files[i].getName().equals(selectedVideo)) {
+                if (files[i].getName().equals(searchName)) {
                     currentIndex = i;
                     break;
                 }

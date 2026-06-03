@@ -63,22 +63,35 @@ fun ManageScreen(viewModel: MediaViewModel) {
                     expanded = showFabMenu,
                     onDismissRequest = { showFabMenu = false }
                 ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.import_to_camera_dir)) },
-                        onClick = {
-                            showFabMenu = false
-                            videoImportLauncher.launch(arrayOf("video/*"))
-                        },
-                        leadingIcon = { Icon(Icons.Default.Add, null) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.select_from_storage)) },
-                        onClick = {
-                            showFabMenu = false
-                            videoRefLauncher.launch(arrayOf("video/*"))
-                        },
-                        leadingIcon = { Icon(Icons.Default.VideoLibrary, null) }
-                    )
+                    if (selectedTab == 0) {
+                        // 视频 Tab
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.import_to_camera_dir)) },
+                            onClick = {
+                                showFabMenu = false
+                                videoImportLauncher.launch(arrayOf("video/*"))
+                            },
+                            leadingIcon = { Icon(Icons.Default.Add, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.select_from_storage)) },
+                            onClick = {
+                                showFabMenu = false
+                                videoRefLauncher.launch(arrayOf("video/*"))
+                            },
+                            leadingIcon = { Icon(Icons.Default.VideoLibrary, null) }
+                        )
+                    } else {
+                        // 音频 Tab
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.import_to_camera_dir)) },
+                            onClick = {
+                                showFabMenu = false
+                                audioLauncher.launch(arrayOf("audio/*"))
+                            },
+                            leadingIcon = { Icon(Icons.Default.Add, null) }
+                        )
+                    }
                 }
                 FloatingActionButton(
                     onClick = { showFabMenu = true }
