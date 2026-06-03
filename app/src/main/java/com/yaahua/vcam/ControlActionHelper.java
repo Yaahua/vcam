@@ -56,7 +56,7 @@ public final class ControlActionHelper {
         }
         int newIndex = currentIndex == -1 ? 0
                 : (next ? (currentIndex + 1) % files.length : (currentIndex - 1 + files.length) % files.length);
-        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[newIndex].getName());
+        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[newIndex].getAbsolutePath());
         return true;
     }
 

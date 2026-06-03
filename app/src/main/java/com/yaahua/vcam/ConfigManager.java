@@ -91,7 +91,7 @@ public class ConfigManager {
 
     public void setContext(Context context) {
         this.context = context;
-        reload();
+        forceReload();
     }
 
     public JSONObject getConfigData() {

@@ -36,6 +36,9 @@ public final class ConfigWatcher {
         if (configObserver != null) return;
 
         LogUtil.log("【CS】初始化配置监听");
+        
+        // ---- 确保 HookGuards 持有的 ConfigManager 有 Context（可走 Provider 跨进程读配置）----
+        HookGuards.ensureConfigHasContext(context);
 
         // ---- ContentObserver（Provider 变更）----
         configObserver = new android.database.ContentObserver(mainHandler) {
@@ -84,6 +87,26 @@ public final class ConfigWatcher {
         }
 
         registerBroadcastReceiver(context);
+
+        // ---- 兜底：定时文件轮询（5秒间隔），防止 ContentObserver/FileObserver 都失效 ----
+        mainHandler.postDelayed(new Runnable() {
+            private long lastMtime = new java.io.File(ConfigManager.DEFAULT_CONFIG_DIR,
+                    ConfigManager.CONFIG_FILE_NAME).lastModified();
+            @Override
+            public void run() {
+                try {
+                    long mtime = new java.io.File(ConfigManager.DEFAULT_CONFIG_DIR,
+                            ConfigManager.CONFIG_FILE_NAME).lastModified();
+                    if (mtime > lastMtime) {
+                        lastMtime = mtime;
+                        LogUtil.log("【CS】轮询检测到配置变更");
+                        HookGuards.invalidateConfig();
+                        fireCallback();
+                    }
+                } catch (Exception ignored) {}
+                mainHandler.postDelayed(this, 5000);
+            }
+        }, 5000);
     }
 
     /** 尾随执行防抖：每次调用重置计时器，300ms 内无新事件才真正执行回调 */

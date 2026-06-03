@@ -140,8 +140,8 @@ public class HookMain implements IXposedHookLoadPackage {
     }
 
     private void initConfigWatcher(final XC_LoadPackage.LoadPackageParam lpparam) {
-        if (configWatcherInitialized) return;
-        configWatcherInitialized = true;
+        // 不再使用全局静态标志，确保每个进程都能初始化
+        // findAndHookMethod 本身是幂等的，多次调用无害
 
         // 等待 Application onCreate 完成后再初始化（需要有效的 Context）
         XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader,

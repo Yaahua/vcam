@@ -18,15 +18,24 @@ public class VideoProvider extends ContentProvider {
     private ConfigManager configManager;
 
     private boolean isCallerAllowed() {
+        return isCallerAllowed(false);
+    }
+
+    /** @param writeOperation true 表示写操作（call），需要白名单检查 */
+    private boolean isCallerAllowed(boolean writeOperation) {
         android.content.Context context = getContext();
         if (context == null) return false;
 
         int callingUid = Binder.getCallingUid();
         if (callingUid == android.os.Process.myUid()) return true;
 
+        // 读操作放通所有调用者
+        if (!writeOperation) return true;
+
+        // 写操作需要白名单
         String[] packages = context.getPackageManager().getPackagesForUid(callingUid);
         if (packages == null || packages.length == 0) {
-            Log.w("VideoProvider", "Rejecting call with empty package list for uid=" + callingUid);
+            Log.w("VideoProvider", "Rejecting write: empty package list for uid=" + callingUid);
             return false;
         }
 
@@ -35,7 +44,7 @@ public class VideoProvider extends ContentProvider {
         for (String pkg : packages) {
             if (allowedPackages.contains(pkg)) return true;
         }
-        Log.w("VideoProvider", "Rejecting caller packages=" + java.util.Arrays.toString(packages));
+        Log.w("VideoProvider", "Rejecting write from packages=" + java.util.Arrays.toString(packages));
         return false;
     }
 
@@ -183,7 +192,7 @@ public class VideoProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
-        if (!isCallerAllowed()) {
+        if (!isCallerAllowed(true)) {
             Bundle denied = new Bundle();
             denied.putBoolean(IpcContract.EXTRA_CHANGED, false);
             return denied;
@@ -236,7 +245,7 @@ public class VideoProvider extends ContentProvider {
         }
         int newIndex = (currentIndex == -1) ? 0
                 : (next ? (currentIndex + 1) % files.length : (currentIndex - 1 + files.length) % files.length);
-        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[newIndex].getName());
+        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[newIndex].getAbsolutePath());
         return true;
     }
 
@@ -250,7 +259,7 @@ public class VideoProvider extends ContentProvider {
         });
         if (files == null || files.length == 0) return false;
         int index = java.util.concurrent.ThreadLocalRandom.current().nextInt(files.length);
-        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[index].getName());
+        configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[index].getAbsolutePath());
         return true;
     }
 }

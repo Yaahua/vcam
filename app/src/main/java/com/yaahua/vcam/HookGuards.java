@@ -20,6 +20,16 @@ public class HookGuards {
         configDirty = true;
     }
 
+    /** 确保 ConfigManager 持有有效的 Context（用于 Provider 跨进程读配置）。 */
+    public static void ensureConfigHasContext(android.content.Context context) {
+        if (context == null) return;
+        if (configManager == null) {
+            configManager = new ConfigManager(false);
+        }
+        configManager.setSkipProviderReload(false);
+        configManager.setContext(context);
+    }
+
     private static long configFileLastModified = 0;
 
     private static final String[] VIDEO_EXTENSIONS = { ".mp4", ".mov", ".avi", ".mkv" };
@@ -59,22 +69,34 @@ public class HookGuards {
         String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         File dir = new File(SharedState.video_path);
         if (selectedName != null && !selectedName.isEmpty()) {
+            // 支持绝对路径
             if (selectedName.startsWith("/")) {
                 File absolute = new File(selectedName);
-                if (absolute.exists() && !absolute.isDirectory()) return absolute;
+                try {
+                    if (absolute.exists() && !absolute.isDirectory()) return absolute;
+                } catch (SecurityException ignored) {
+                    // Android 11+ scoped storage 可能拒绝 exists()，但路径仍有效
+                    return absolute;
+                }
             }
             File selected = new File(dir, selectedName);
-            if (selected.exists() && !selected.isDirectory()) return selected;
+            try {
+                if (selected.exists() && !selected.isDirectory()) return selected;
+            } catch (SecurityException ignored) {
+                return selected;
+            }
         }
         // 回退：目录中任意视频（支持四种格式）
-        File[] files = dir.listFiles((d, name) -> {
-            String lower = name.toLowerCase();
-            for (String ext : VIDEO_EXTENSIONS) {
-                if (lower.endsWith(ext)) return true;
-            }
-            return false;
-        });
-        if (files != null && files.length > 0) return files[0];
+        try {
+            File[] files = dir.listFiles((d, name) -> {
+                String lower = name.toLowerCase();
+                for (String ext : VIDEO_EXTENSIONS) {
+                    if (lower.endsWith(ext)) return true;
+                }
+                return false;
+            });
+            if (files != null && files.length > 0) return files[0];
+        } catch (SecurityException ignored) {}
         return new File(dir, "virtual.mp4");
     }
 
