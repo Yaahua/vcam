@@ -108,5 +108,55 @@
             </TableRow>
 
         </TableLayout>
+
+        <!-- ==================== 调试信息区 ==================== -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="8dp"
+            android:background="#888888" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Debug Info"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#FF6600" />
+
+            <Button
+                android:id="@+id/btn_refresh_debug"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:text="Refresh"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <ScrollView
+            android:layout_width="match_parent"
+            android:layout_height="320dp"
+            android:background="#F5F5F5"
+            android:padding="6dp">
+
+            <TextView
+                android:id="@+id/debug_info"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="11sp"
+                android:fontFamily="monospace"
+                android:textColor="#333333"
+                android:lineSpacingExtra="1dp"
+                android:textIsSelectable="true"
+                android:text="Loading..." />
+        </ScrollView>
+
     </LinearLayout>
 </ScrollView>
