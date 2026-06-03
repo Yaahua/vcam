@@ -168,11 +168,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun checkPermissionsStatus() {
-        mainViewModel.updatePermissionStatus(hasRequiredPermissions())
+        mainViewModel.updatePermissionStatus(hasStoragePermission())
     }
 
     private fun checkAndRequestPermissions() {
-        if (!hasRequiredPermissions()) {
+        if (!hasStoragePermission()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 if (!android.os.Environment.isExternalStorageManager()) {
                     try {
@@ -186,28 +186,24 @@ class MainActivity : ComponentActivity() {
                         manageExternalStorageLauncher.launch(intent)
                     }
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                        requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-                    }
-                }
             } else {
                 requestPermissionLauncher.launch(
                     arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 )
             }
-        } else {
-            initDirectory()
+        }
+        
+        // Notification permission (optional, only on Android13+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+            }
         }
     }
 
-    private fun hasRequiredPermissions(): Boolean {
+    private fun hasStoragePermission(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val storageGranted = android.os.Environment.isExternalStorageManager()
-            val notificationGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-            } else true
-            return storageGranted && notificationGranted
+            return android.os.Environment.isExternalStorageManager()
         } else {
             return arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE).all {
                 ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
