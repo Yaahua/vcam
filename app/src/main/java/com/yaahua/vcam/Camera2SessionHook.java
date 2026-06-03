@@ -374,27 +374,19 @@ public class Camera2SessionHook {
 
         // Reader Surface 1 — 若被 stopAllPlayers 置 null 则重建
         if (SharedState.c2_reader_Surfcae != null) {
-            if (SharedState.c2_hw_decode_obj == null) {
-                SharedState.c2_hw_decode_obj = new VideoToFrames();
+            try {
+                if (SharedState.c2_hw_decode_obj == null) {
+                    SharedState.c2_hw_decode_obj = new VideoToFrames();
+                } else {
+                    SharedState.c2_hw_decode_obj.stopDecode();
+                    SharedState.c2_hw_decode_obj = new VideoToFrames();
+                }
                 if (SharedState.imageReaderFormat == 256) {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.JPEG);
                 } else {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
-            } else {
-                try {
-                    SharedState.c2_hw_decode_obj.stopDecode();
-                    SharedState.c2_hw_decode_obj = new VideoToFrames();
-                    if (SharedState.imageReaderFormat == 256) {
-                        SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.JPEG);
-                    } else {
-                        SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
-                    }
-                    SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
-                } catch (Throwable ignored) {}
-            }
-            try {
                 SharedState.c2_hw_decode_obj.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader1 失败: " + t);
@@ -403,27 +395,19 @@ public class Camera2SessionHook {
 
         // Reader Surface 2
         if (SharedState.c2_reader_Surfcae_1 != null) {
-            if (SharedState.c2_hw_decode_obj_1 == null) {
-                SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
+            try {
+                if (SharedState.c2_hw_decode_obj_1 == null) {
+                    SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
+                } else {
+                    SharedState.c2_hw_decode_obj_1.stopDecode();
+                    SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
+                }
                 if (SharedState.imageReaderFormat == 256) {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.JPEG);
                 } else {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
-            } else {
-                try {
-                    SharedState.c2_hw_decode_obj_1.stopDecode();
-                    SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
-                    if (SharedState.imageReaderFormat == 256) {
-                        SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.JPEG);
-                    } else {
-                        SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
-                    }
-                    SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
-                } catch (Throwable ignored) {}
-            }
-            try {
                 SharedState.c2_hw_decode_obj_1.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader2 失败: " + t);
