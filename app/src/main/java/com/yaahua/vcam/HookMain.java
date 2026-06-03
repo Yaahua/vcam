@@ -20,6 +20,8 @@ import com.yaahua.vcam.BuildConfig;
 
 public class HookMain implements IXposedHookLoadPackage {
 
+    private static volatile boolean configWatcherInitialized = false;
+
     public void handleLoadPackage(final XC_LoadPackage.LoadPackageParam lpparam) throws Exception {
 
         // ========== callApplicationOnCreate：初始化 Context、权限检查、目录迁移 ==========
@@ -126,5 +128,53 @@ public class HookMain implements IXposedHookLoadPackage {
 
         // ========== 委托 Microphone Handler ==========
         MicrophoneHandler.init(lpparam);
+
+        // ========== 配置变更监听：广播 + 文件监控 → 热切换视频/声音 ==========
+        if (!lpparam.packageName.equals(BuildConfig.APPLICATION_ID)) {
+            try {
+                initConfigWatcher(lpparam);
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】ConfigWatcher 初始化失败: " + e);
+            }
+        }
+    }
+
+    private void initConfigWatcher(final XC_LoadPackage.LoadPackageParam lpparam) {
+        if (configWatcherInitialized) return;
+        configWatcherInitialized = true;
+
+        // 等待 Application onCreate 完成后再初始化（需要有效的 Context）
+        XposedHelpers.findAndHookMethod("android.app.Application", lpparam.classLoader,
+                "onCreate", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                super.afterHookedMethod(param);
+                if (!(param.thisObject instanceof Application)) return;
+                final Application app = (Application) param.thisObject;
+                if (app.getApplicationContext() == null) return;
+
+                new ConfigWatcher(new ConfigWatcher.Callback() {
+                    @Override
+                    public void onMediaSourceChanged() {
+                        XposedBridge.log("【VCAM】配置监听 → 媒体源变更，触发热切换");
+                        try {
+                            Camera1Handler.reloadVideo();
+                        } catch (Exception e) {
+                            XposedBridge.log("【VCAM】Camera1 热切换异常: " + e);
+                        }
+                        try {
+                            Camera2SessionHook.reloadVideo();
+                        } catch (Exception e) {
+                            XposedBridge.log("【VCAM】Camera2 热切换异常: " + e);
+                        }
+                    }
+
+                    @Override
+                    public void onRotationChanged(int degrees) {
+                        XposedBridge.log("【VCAM】配置监听 → 旋转变更: " + degrees + "°");
+                    }
+                }).init(app.getApplicationContext());
+            }
+        });
     }
 }

@@ -483,4 +483,71 @@ public class Camera1Handler {
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height);
         return rgb2YCbCr420(pixels, width, height);
     }
+
+    // ======================== 热切换：视频变更时重新加载播放器 ========================
+    public static void reloadVideo() {
+        HookGuards.getConfig().forceReload();
+        File newFile = HookGuards.getVideoFile();
+        String newPath = newFile.getAbsolutePath();
+        boolean playSound = HookGuards.shouldPlaySound();
+        XposedBridge.log("【VCAM】Camera1 热切换视频 → " + newPath);
+
+        // MediaPlayer (SurfaceTexture 预览)
+        if (SharedState.mSurfacetexture != null && SharedState.mMediaPlayer != null) {
+            try {
+                SharedState.mMediaPlayer.reset();
+                SharedState.mMediaPlayer.setSurface(SharedState.mSurface);
+                SharedState.mMediaPlayer.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
+                SharedState.mMediaPlayer.setLooping(true);
+                SharedState.mMediaPlayer.setOnPreparedListener(mp -> SharedState.mMediaPlayer.start());
+                SharedState.mMediaPlayer.setDataSource(newPath);
+                SharedState.mMediaPlayer.prepare();
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】Camera1 热切换 mMediaPlayer 失败: " + e);
+            }
+        }
+
+        // mplayer1 (SurfaceHolder 预览)
+        if (SharedState.ori_holder != null && SharedState.mplayer1 != null) {
+            try {
+                SharedState.mplayer1.reset();
+                SharedState.mplayer1.setSurface(SharedState.ori_holder.getSurface());
+                SharedState.mplayer1.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
+                SharedState.mplayer1.setLooping(true);
+                SharedState.mplayer1.setOnPreparedListener(mp -> SharedState.mplayer1.start());
+                SharedState.mplayer1.setDataSource(newPath);
+                SharedState.mplayer1.prepare();
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】Camera1 热切换 mplayer1 失败: " + e);
+            }
+        }
+
+        // 解码器
+        if (SharedState.hw_decode_obj != null) {
+            try {
+                SharedState.hw_decode_obj.stopDecode();
+                SharedState.hw_decode_obj = new VideoToFrames();
+                SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
+                SharedState.hw_decode_obj.decode(newPath);
+            } catch (Throwable t) {
+                XposedBridge.log("【VCAM】Camera1 热切换 hw_decode 失败: " + t);
+            }
+        }
+
+        XposedBridge.log("【VCAM】Camera1 热切换完成");
+    }
+
+    // ======================== 声音开关：动态更新音量 ========================
+    public static void updateSoundVolume() {
+        boolean playSound = HookGuards.shouldPlaySound();
+        float vol = playSound ? 1f : 0f;
+        XposedBridge.log("【VCAM】Camera1 更新音量 → " + (playSound ? "开" : "关"));
+
+        if (SharedState.mMediaPlayer != null) {
+            SharedState.mMediaPlayer.setVolume(vol, vol);
+        }
+        if (SharedState.mplayer1 != null) {
+            SharedState.mplayer1.setVolume(vol, vol);
+        }
+    }
 }

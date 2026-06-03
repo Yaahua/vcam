@@ -116,6 +116,9 @@ public final class ConfigWatcher {
         int oldRotation = config.getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0);
         String oldSourceType = config.getString(ConfigManager.KEY_MEDIA_SOURCE_TYPE, ConfigManager.MEDIA_SOURCE_LOCAL);
         String oldStreamUrl = config.getString(ConfigManager.KEY_STREAM_URL, "");
+        boolean oldSound = config.getBoolean(ConfigManager.KEY_PLAY_VIDEO_SOUND, false);
+        boolean oldDisable = config.getBoolean(ConfigManager.KEY_DISABLE_MODULE, false);
+        boolean oldToast = config.getBoolean(ConfigManager.KEY_DISABLE_TOAST, false);
 
         config.updateConfigFromJSON(configJson);
 
@@ -126,17 +129,23 @@ public final class ConfigWatcher {
         int newRotation = config.getInt(ConfigManager.KEY_VIDEO_ROTATION_OFFSET, 0);
         String newSourceType = config.getString(ConfigManager.KEY_MEDIA_SOURCE_TYPE, ConfigManager.MEDIA_SOURCE_LOCAL);
         String newStreamUrl = config.getString(ConfigManager.KEY_STREAM_URL, "");
+        boolean newSound = config.getBoolean(ConfigManager.KEY_PLAY_VIDEO_SOUND, false);
+        boolean newDisable = config.getBoolean(ConfigManager.KEY_DISABLE_MODULE, false);
+        boolean newToast = config.getBoolean(ConfigManager.KEY_DISABLE_TOAST, false);
 
         boolean mediaChanged = !oldVideo.equals(newVideo) ||
                 !oldImage.equals(newImage) ||
                 !oldMode.equals(newMode) ||
                 (oldFpd != newFpd) ||
                 !oldSourceType.equals(newSourceType) ||
-                !oldStreamUrl.equals(newStreamUrl);
+                !oldStreamUrl.equals(newStreamUrl) ||
+                (oldSound != newSound) ||
+                (oldDisable != newDisable) ||
+                (oldToast != newToast);
 
         if (mediaChanged) {
             callback.onMediaSourceChanged();
-            LogUtil.log("【CS】配置更新: 媒体源变化");
+            LogUtil.log("【CS】配置更新: 媒体源/开关变化");
         } else if (oldRotation != newRotation) {
             LogUtil.log("【CS】配置更新: 旋转 " + newRotation + "°");
             callback.onRotationChanged(newRotation);

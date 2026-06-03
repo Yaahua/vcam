@@ -13,12 +13,31 @@ public class HookGuards {
         configManager = cm;
     }
 
+    private static long configFileLastModified = 0;
+
     private static ConfigManager getConfig() {
         if (configManager == null) {
             configManager = new ConfigManager(false);
             configManager.reload();
+            configFileLastModified = getConfigFileMtime();
+        } else {
+            // 每次访问检查文件 mtime，变化则强制重载
+            long currentMtime = getConfigFileMtime();
+            if (currentMtime > configFileLastModified) {
+                configManager.forceReload();
+                configFileLastModified = currentMtime;
+            }
         }
         return configManager;
+    }
+
+    private static long getConfigFileMtime() {
+        try {
+            File f = new File(ConfigManager.DEFAULT_CONFIG_DIR, ConfigManager.CONFIG_FILE_NAME);
+            return f.lastModified();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public static File getVideoFile() {

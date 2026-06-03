@@ -358,4 +358,94 @@ public class Camera2SessionHook {
             }
         });
     }
+
+    // ======================== 热切换：视频变更时重新加载播放器 ========================
+    public static void reloadVideo() {
+        HookGuards.getConfig().forceReload();
+        File newFile = HookGuards.getVideoFile();
+        String newPath = newFile.getAbsolutePath();
+        boolean playSound = HookGuards.shouldPlaySound();
+
+        XposedBridge.log("【VCAM】热切换视频 → " + newPath + " 声音=" + playSound);
+
+        // Reader Surface 1 — 重启解码
+        if (SharedState.c2_reader_Surfcae != null && SharedState.c2_hw_decode_obj != null) {
+            try {
+                SharedState.c2_hw_decode_obj.stopDecode();
+                SharedState.c2_hw_decode_obj = new VideoToFrames();
+                if (SharedState.imageReaderFormat == 256) {
+                    SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.JPEG);
+                } else {
+                    SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
+                }
+                SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
+                SharedState.c2_hw_decode_obj.decode(newPath);
+            } catch (Throwable t) {
+                XposedBridge.log("【VCAM】热切换 reader1 失败: " + t);
+            }
+        }
+
+        // Reader Surface 2
+        if (SharedState.c2_reader_Surfcae_1 != null && SharedState.c2_hw_decode_obj_1 != null) {
+            try {
+                SharedState.c2_hw_decode_obj_1.stopDecode();
+                SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
+                if (SharedState.imageReaderFormat == 256) {
+                    SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.JPEG);
+                } else {
+                    SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
+                }
+                SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
+                SharedState.c2_hw_decode_obj_1.decode(newPath);
+            } catch (Throwable t) {
+                XposedBridge.log("【VCAM】热切换 reader2 失败: " + t);
+            }
+        }
+
+        // Preview Surface 1 — 切换 MediaPlayer
+        if (SharedState.c2_preview_Surfcae != null && SharedState.c2_player != null) {
+            try {
+                SharedState.c2_player.reset();
+                SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
+                SharedState.c2_player.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
+                SharedState.c2_player.setLooping(true);
+                SharedState.c2_player.setOnPreparedListener(mp -> SharedState.c2_player.start());
+                SharedState.c2_player.setDataSource(newPath);
+                SharedState.c2_player.prepare();
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】热切换 c2_player 失败: " + e);
+            }
+        }
+
+        // Preview Surface 2
+        if (SharedState.c2_preview_Surfcae_1 != null && SharedState.c2_player_1 != null) {
+            try {
+                SharedState.c2_player_1.reset();
+                SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);
+                SharedState.c2_player_1.setVolume(playSound ? 1f : 0f, playSound ? 1f : 0f);
+                SharedState.c2_player_1.setLooping(true);
+                SharedState.c2_player_1.setOnPreparedListener(mp -> SharedState.c2_player_1.start());
+                SharedState.c2_player_1.setDataSource(newPath);
+                SharedState.c2_player_1.prepare();
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】热切换 c2_player_1 失败: " + e);
+            }
+        }
+
+        XposedBridge.log("【VCAM】热切换完成");
+    }
+
+    // ======================== 声音开关：动态更新音量 ========================
+    public static void updateSoundVolume() {
+        boolean playSound = HookGuards.shouldPlaySound();
+        float vol = playSound ? 1f : 0f;
+        XposedBridge.log("【VCAM】更新音量 → " + (playSound ? "开" : "关"));
+
+        if (SharedState.c2_player != null) {
+            SharedState.c2_player.setVolume(vol, vol);
+        }
+        if (SharedState.c2_player_1 != null) {
+            SharedState.c2_player_1.setVolume(vol, vol);
+        }
+    }
 }
