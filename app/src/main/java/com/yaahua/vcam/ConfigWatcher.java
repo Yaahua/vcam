@@ -11,7 +11,8 @@ import android.os.Looper;
 
 /**
  * 配置变更监听器：ContentObserver + FileObserver + BroadcastReceiver。
- * 简化自 CamSwap ConfigWatcher，暂不依赖 VideoManager。
+ * v5.1 修复：广播路径直接注入 HookGuards，消除 ConfigManager 实例分裂；
+ * ContentObserver 增加防抖消除与广播的双重触发。
  */
 public final class ConfigWatcher {
 
@@ -23,6 +24,8 @@ public final class ConfigWatcher {
     private final Callback callback;
     private android.database.ContentObserver configObserver;
     private FileObserver configFileObserver;
+    private long lastObserverFireTime = 0;
+    private static final long OBSERVER_DEBOUNCE_MS = 300;
 
     public ConfigWatcher(Callback callback) {
         this.callback = callback;
@@ -32,13 +35,20 @@ public final class ConfigWatcher {
         if (configObserver != null) return;
 
         LogUtil.log("【CS】初始化配置监听");
+
+        // ---- ContentObserver（Provider 变更）----
         configObserver = new android.database.ContentObserver(new Handler(Looper.getMainLooper())) {
             @Override
             public void onChange(boolean selfChange) {
                 super.onChange(selfChange);
+                long now = System.currentTimeMillis();
+                if (now - lastObserverFireTime < OBSERVER_DEBOUNCE_MS) {
+                    LogUtil.log("【CS】ContentObserver 防抖跳过");
+                    return;
+                }
+                lastObserverFireTime = now;
                 LogUtil.log("【CS】Provider 配置变更");
-                ConfigManager config = getConfig(context);
-                config.forceReload();
+                HookGuards.invalidateConfig();
                 callback.onMediaSourceChanged();
             }
         };
@@ -62,7 +72,7 @@ public final class ConfigWatcher {
                         if (path != null && path.endsWith(".json")) {
                             LogUtil.log("【CS】文件变更: " + path);
                             new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                                getConfig(context).forceReload();
+                                HookGuards.invalidateConfig();
                                 callback.onMediaSourceChanged();
                             }, 200);
                         }
@@ -105,9 +115,11 @@ public final class ConfigWatcher {
     }
 
     private void handleConfigUpdate(Intent intent) {
-        ConfigManager config = getConfig(null);
         String configJson = intent.getStringExtra(IpcContract.EXTRA_CONFIG_JSON);
         if (configJson == null) return;
+
+        // 直接注入 HookGuards 持有的 ConfigManager，不再创建新实例
+        ConfigManager config = HookGuards.getConfig();
 
         String oldVideo = config.getString(ConfigManager.KEY_SELECTED_VIDEO, "");
         String oldImage = config.getString(ConfigManager.KEY_SELECTED_IMAGE, "");
@@ -121,6 +133,9 @@ public final class ConfigWatcher {
         boolean oldToast = config.getBoolean(ConfigManager.KEY_DISABLE_TOAST, false);
 
         config.updateConfigFromJSON(configJson);
+
+        // 标记 dirty，阻止 mtime 回退覆盖
+        HookGuards.invalidateConfig();
 
         String newVideo = config.getString(ConfigManager.KEY_SELECTED_VIDEO, "");
         String newImage = config.getString(ConfigManager.KEY_SELECTED_IMAGE, "");
@@ -155,7 +170,6 @@ public final class ConfigWatcher {
     }
 
     private static ConfigManager getConfig(Context context) {
-        // 返回一个共享的 ConfigManager，如有 Context 则设置
         ConfigManager cm = new ConfigManager(false);
         if (context != null) cm.setContext(context);
         cm.reload();

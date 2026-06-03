@@ -211,7 +211,11 @@ public class VideoProvider extends ContentProvider {
             return pickRandomVideo();
         }
         File dir = new File(ConfigManager.DEFAULT_CONFIG_DIR);
-        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
+        File[] files = dir.listFiles((d, name) -> {
+            String lower = name.toLowerCase();
+            return lower.endsWith(".mp4") || lower.endsWith(".mov")
+                    || lower.endsWith(".avi") || lower.endsWith(".mkv");
+        });
         if (files == null || files.length == 0) return false;
 
         String selectedVideo = configManager.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
@@ -235,7 +239,11 @@ public class VideoProvider extends ContentProvider {
     private boolean pickRandomVideo() {
         File dir = new File(ConfigManager.DEFAULT_CONFIG_DIR);
         if (!dir.exists() || !dir.isDirectory()) return false;
-        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
+        File[] files = dir.listFiles((d, name) -> {
+            String lower = name.toLowerCase();
+            return lower.endsWith(".mp4") || lower.endsWith(".mov")
+                    || lower.endsWith(".avi") || lower.endsWith(".mkv");
+        });
         if (files == null || files.length == 0) return false;
         int index = java.util.concurrent.ThreadLocalRandom.current().nextInt(files.length);
         configManager.setString(ConfigManager.KEY_SELECTED_VIDEO, files[index].getName());

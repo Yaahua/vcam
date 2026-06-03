@@ -99,7 +99,7 @@ public class ConfigManager {
     }
 
     private final AtomicLong lastReloadTime = new AtomicLong(0);
-    private static final long MIN_RELOAD_INTERVAL_MS = 1000;
+    private static final long MIN_RELOAD_INTERVAL_MS = 200;
 
     private interface ConfigMutation {
         void apply(JSONObject config) throws JSONException;

@@ -372,10 +372,9 @@ public class Camera2SessionHook {
 
         XposedBridge.log("【VCAM】热切换视频 → " + newPath + " 声音=" + playSound);
 
-        // Reader Surface 1 — 重启解码
-        if (SharedState.c2_reader_Surfcae != null && SharedState.c2_hw_decode_obj != null) {
-            try {
-                SharedState.c2_hw_decode_obj.stopDecode();
+        // Reader Surface 1 — 若被 stopAllPlayers 置 null 则重建
+        if (SharedState.c2_reader_Surfcae != null) {
+            if (SharedState.c2_hw_decode_obj == null) {
                 SharedState.c2_hw_decode_obj = new VideoToFrames();
                 if (SharedState.imageReaderFormat == 256) {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.JPEG);
@@ -383,6 +382,19 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
+            } else {
+                try {
+                    SharedState.c2_hw_decode_obj.stopDecode();
+                    SharedState.c2_hw_decode_obj = new VideoToFrames();
+                    if (SharedState.imageReaderFormat == 256) {
+                        SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.JPEG);
+                    } else {
+                        SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
+                    }
+                    SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
+                } catch (Throwable ignored) {}
+            }
+            try {
                 SharedState.c2_hw_decode_obj.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader1 失败: " + t);
@@ -390,9 +402,8 @@ public class Camera2SessionHook {
         }
 
         // Reader Surface 2
-        if (SharedState.c2_reader_Surfcae_1 != null && SharedState.c2_hw_decode_obj_1 != null) {
-            try {
-                SharedState.c2_hw_decode_obj_1.stopDecode();
+        if (SharedState.c2_reader_Surfcae_1 != null) {
+            if (SharedState.c2_hw_decode_obj_1 == null) {
                 SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
                 if (SharedState.imageReaderFormat == 256) {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.JPEG);
@@ -400,14 +411,31 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
+            } else {
+                try {
+                    SharedState.c2_hw_decode_obj_1.stopDecode();
+                    SharedState.c2_hw_decode_obj_1 = new VideoToFrames();
+                    if (SharedState.imageReaderFormat == 256) {
+                        SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.JPEG);
+                    } else {
+                        SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
+                    }
+                    SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
+                } catch (Throwable ignored) {}
+            }
+            try {
                 SharedState.c2_hw_decode_obj_1.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader2 失败: " + t);
             }
         }
 
-        // Preview Surface 1 — 切换 MediaPlayer
-        if (SharedState.c2_preview_Surfcae != null && SharedState.c2_player != null) {
+        // Preview Surface 1 — 若被 stopAllPlayers 置 null 则重建
+        if (SharedState.c2_preview_Surfcae != null) {
+            if (SharedState.c2_player == null) {
+                SharedState.c2_player = new MediaPlayer();
+                SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
+            }
             try {
                 SharedState.c2_player.reset();
                 SharedState.c2_player.setSurface(SharedState.c2_preview_Surfcae);
@@ -422,7 +450,11 @@ public class Camera2SessionHook {
         }
 
         // Preview Surface 2
-        if (SharedState.c2_preview_Surfcae_1 != null && SharedState.c2_player_1 != null) {
+        if (SharedState.c2_preview_Surfcae_1 != null) {
+            if (SharedState.c2_player_1 == null) {
+                SharedState.c2_player_1 = new MediaPlayer();
+                SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);
+            }
             try {
                 SharedState.c2_player_1.reset();
                 SharedState.c2_player_1.setSurface(SharedState.c2_preview_Surfcae_1);

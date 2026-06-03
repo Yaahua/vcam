@@ -8,20 +8,34 @@ public class HookGuards {
     private HookGuards() {}
 
     private static ConfigManager configManager;
+    private static volatile boolean configDirty = true;
 
     public static void setConfigManager(ConfigManager cm) {
         configManager = cm;
+        configDirty = false;
+    }
+
+    /** 标记配置已过期，下次 getConfig() 强制重载 */
+    public static void invalidateConfig() {
+        configDirty = true;
     }
 
     private static long configFileLastModified = 0;
+
+    private static final String[] VIDEO_EXTENSIONS = { ".mp4", ".mov", ".avi", ".mkv" };
 
     public static ConfigManager getConfig() {
         if (configManager == null) {
             configManager = new ConfigManager(false);
             configManager.reload();
             configFileLastModified = getConfigFileMtime();
+            configDirty = false;
+        } else if (configDirty) {
+            configManager.forceReload();
+            configFileLastModified = getConfigFileMtime();
+            configDirty = false;
         } else {
-            // 每次访问检查文件 mtime，变化则强制重载
+            // mtime 仍作为兜底（文件系统被动监听场景）
             long currentMtime = getConfigFileMtime();
             if (currentMtime > configFileLastModified) {
                 configManager.forceReload();
@@ -41,12 +55,10 @@ public class HookGuards {
     }
 
     public static File getVideoFile() {
-        // 优先从 ConfigManager 读取选中的视频
         ConfigManager config = getConfig();
         String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         File dir = new File(SharedState.video_path);
         if (selectedName != null && !selectedName.isEmpty()) {
-            // 支持绝对路径：直接引用任意位置的文件
             if (selectedName.startsWith("/")) {
                 File absolute = new File(selectedName);
                 if (absolute.exists() && !absolute.isDirectory()) return absolute;
@@ -54,8 +66,14 @@ public class HookGuards {
             File selected = new File(dir, selectedName);
             if (selected.exists() && !selected.isDirectory()) return selected;
         }
-        // 回退：目录中任意 mp4 → virtual.mp4
-        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
+        // 回退：目录中任意视频（支持四种格式）
+        File[] files = dir.listFiles((d, name) -> {
+            String lower = name.toLowerCase();
+            for (String ext : VIDEO_EXTENSIONS) {
+                if (lower.endsWith(ext)) return true;
+            }
+            return false;
+        });
         if (files != null && files.length > 0) return files[0];
         return new File(dir, "virtual.mp4");
     }
@@ -64,7 +82,6 @@ public class HookGuards {
     public static boolean isDisabled() {
         ConfigManager config = getConfig();
         if (config.getBoolean(ConfigManager.KEY_DISABLE_MODULE, false)) return true;
-        // 回退：文件标记
         File controlFile = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera1/disable.jpg");
         return controlFile.exists();
     }
@@ -73,7 +90,6 @@ public class HookGuards {
     public static boolean shouldShowToast() {
         ConfigManager config = getConfig();
         if (config.getBoolean(ConfigManager.KEY_DISABLE_TOAST, false)) return false;
-        // 回退：文件标记（no_toast.jpg存在表示禁用toast → 不应显示toast）
         File toastControl = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera1/no_toast.jpg");
         return !toastControl.exists();
     }
@@ -82,7 +98,6 @@ public class HookGuards {
     public static boolean shouldPlaySound() {
         ConfigManager config = getConfig();
         if (config.getBoolean(ConfigManager.KEY_PLAY_VIDEO_SOUND, false)) return true;
-        // 回退：文件标记
         File sfile = new File(Environment.getExternalStorageDirectory().getPath() + "/DCIM/Camera1/no-silent.jpg");
         return sfile.exists();
     }

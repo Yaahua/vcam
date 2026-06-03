@@ -496,8 +496,15 @@ public class Camera1Handler {
         boolean playSound = HookGuards.shouldPlaySound();
         XposedBridge.log("【VCAM】Camera1 热切换视频 → " + newPath);
 
-        // MediaPlayer (SurfaceTexture 预览)
-        if (SharedState.mSurfacetexture != null && SharedState.mMediaPlayer != null) {
+        // MediaPlayer (SurfaceTexture 预览) — 若被 stopAllPlayers 置 null 则重建
+        if (SharedState.mSurfacetexture != null) {
+            if (SharedState.mMediaPlayer == null) {
+                if (SharedState.mSurface == null) {
+                    SharedState.mSurface = new Surface(SharedState.mSurfacetexture);
+                }
+                SharedState.mMediaPlayer = new MediaPlayer();
+                SharedState.mMediaPlayer.setSurface(SharedState.mSurface);
+            }
             try {
                 SharedState.mMediaPlayer.reset();
                 SharedState.mMediaPlayer.setSurface(SharedState.mSurface);
@@ -511,8 +518,12 @@ public class Camera1Handler {
             }
         }
 
-        // mplayer1 (SurfaceHolder 预览)
-        if (SharedState.ori_holder != null && SharedState.mplayer1 != null) {
+        // mplayer1 (SurfaceHolder 预览) — 若被 stopAllPlayers 置 null 则重建
+        if (SharedState.ori_holder != null) {
+            if (SharedState.mplayer1 == null) {
+                SharedState.mplayer1 = new MediaPlayer();
+                SharedState.mplayer1.setSurface(SharedState.ori_holder.getSurface());
+            }
             try {
                 SharedState.mplayer1.reset();
                 SharedState.mplayer1.setSurface(SharedState.ori_holder.getSurface());
@@ -526,12 +537,19 @@ public class Camera1Handler {
             }
         }
 
-        // 解码器
-        if (SharedState.hw_decode_obj != null) {
-            try {
-                SharedState.hw_decode_obj.stopDecode();
+        // 解码器 — 若被 stopAllPlayers 置 null 则重建
+        if (SharedState.camera_onPreviewFrame != null) {
+            if (SharedState.hw_decode_obj == null) {
                 SharedState.hw_decode_obj = new VideoToFrames();
                 SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
+            } else {
+                try {
+                    SharedState.hw_decode_obj.stopDecode();
+                    SharedState.hw_decode_obj = new VideoToFrames();
+                    SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
+                } catch (Throwable ignored) {}
+            }
+            try {
                 SharedState.hw_decode_obj.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】Camera1 热切换 hw_decode 失败: " + t);
