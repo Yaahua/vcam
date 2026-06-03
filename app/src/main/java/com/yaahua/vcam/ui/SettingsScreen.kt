@@ -337,5 +337,5 @@ private fun TransportOption(title: String, selected: Boolean, onClick: () -> Uni
 
 @Composable
 private fun SettingsDivider() {
-    Divider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f), modifier = Modifier.padding(start = 36.dp))
+    HorizontalDivider(color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.08f), modifier = Modifier.padding(start = 36.dp))
 }
