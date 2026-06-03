@@ -11,8 +11,8 @@ import android.os.Looper;
 
 /**
  * 配置变更监听器：ContentObserver + FileObserver + BroadcastReceiver。
- * v5.1 修复：广播路径直接注入 HookGuards，消除 ConfigManager 实例分裂；
- * ContentObserver 增加防抖消除与广播的双重触发。
+ * v5.2 修复：防抖改为尾随执行模式（trailing debounce），
+ * 快速连续变更时只执行最后一次，不丢失中间态。
  */
 public final class ConfigWatcher {
 
@@ -22,10 +22,11 @@ public final class ConfigWatcher {
     }
 
     private final Callback callback;
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
     private android.database.ContentObserver configObserver;
     private FileObserver configFileObserver;
-    private long lastObserverFireTime = 0;
-    private static final long OBSERVER_DEBOUNCE_MS = 300;
+    private Runnable pendingCallback;
+    private static final long DEBOUNCE_MS = 300;
 
     public ConfigWatcher(Callback callback) {
         this.callback = callback;
@@ -37,19 +38,13 @@ public final class ConfigWatcher {
         LogUtil.log("【CS】初始化配置监听");
 
         // ---- ContentObserver（Provider 变更）----
-        configObserver = new android.database.ContentObserver(new Handler(Looper.getMainLooper())) {
+        configObserver = new android.database.ContentObserver(mainHandler) {
             @Override
             public void onChange(boolean selfChange) {
                 super.onChange(selfChange);
-                long now = System.currentTimeMillis();
-                if (now - lastObserverFireTime < OBSERVER_DEBOUNCE_MS) {
-                    LogUtil.log("【CS】ContentObserver 防抖跳过");
-                    return;
-                }
-                lastObserverFireTime = now;
                 LogUtil.log("【CS】Provider 配置变更");
                 HookGuards.invalidateConfig();
-                callback.onMediaSourceChanged();
+                fireCallback();
             }
         };
 
@@ -71,10 +66,10 @@ public final class ConfigWatcher {
                     public void onEvent(int event, String path) {
                         if (path != null && path.endsWith(".json")) {
                             LogUtil.log("【CS】文件变更: " + path);
-                            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                            mainHandler.post(() -> {
                                 HookGuards.invalidateConfig();
-                                callback.onMediaSourceChanged();
-                            }, 200);
+                                fireCallback();
+                            });
                         }
                     }
                 };
@@ -84,11 +79,26 @@ public final class ConfigWatcher {
                 LogUtil.log("【CS】FileObserver 启动失败: " + e);
             }
 
-            new Handler(Looper.getMainLooper()).postDelayed(() ->
+            mainHandler.postDelayed(() ->
                     getConfig(context).requestConfig(context), 1000);
         }
 
         registerBroadcastReceiver(context);
+    }
+
+    /** 尾随执行防抖：每次调用重置计时器，300ms 内无新事件才真正执行回调 */
+    private void fireCallback() {
+        if (pendingCallback != null) {
+            mainHandler.removeCallbacks(pendingCallback);
+        }
+        pendingCallback = new Runnable() {
+            @Override
+            public void run() {
+                pendingCallback = null;
+                callback.onMediaSourceChanged();
+            }
+        };
+        mainHandler.postDelayed(pendingCallback, DEBOUNCE_MS);
     }
 
     private void registerBroadcastReceiver(final Context context) {
@@ -134,9 +144,6 @@ public final class ConfigWatcher {
 
         config.updateConfigFromJSON(configJson);
 
-        // 标记 dirty，阻止 mtime 回退覆盖
-        HookGuards.invalidateConfig();
-
         String newVideo = config.getString(ConfigManager.KEY_SELECTED_VIDEO, "");
         String newImage = config.getString(ConfigManager.KEY_SELECTED_IMAGE, "");
         String newMode = config.getString(ConfigManager.KEY_REPLACE_MODE, ConfigManager.REPLACE_MODE_VIDEO);
@@ -159,7 +166,9 @@ public final class ConfigWatcher {
                 (oldToast != newToast);
 
         if (mediaChanged) {
-            callback.onMediaSourceChanged();
+            // 广播 JSON 已注入内存，但 invalidateConfig 确保后续 getConfig 走文件校验
+            HookGuards.invalidateConfig();
+            fireCallback();
             LogUtil.log("【CS】配置更新: 媒体源/开关变化");
         } else if (oldRotation != newRotation) {
             LogUtil.log("【CS】配置更新: 旋转 " + newRotation + "°");

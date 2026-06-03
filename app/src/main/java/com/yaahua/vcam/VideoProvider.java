@@ -128,9 +128,13 @@ public class VideoProvider extends ContentProvider {
             videoFile = new File(videoDir, "virtual.mp4");
         }
 
-        // find any mp4
+        // find any video
         if (!videoFile.exists() || videoFile.isDirectory()) {
-            File[] files = videoDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".mp4"));
+            File[] files = videoDir.listFiles((d, name) -> {
+                String lower = name.toLowerCase();
+                return lower.endsWith(".mp4") || lower.endsWith(".mov")
+                        || lower.endsWith(".avi") || lower.endsWith(".mkv");
+            });
             if (files != null && files.length > 0) videoFile = files[0];
         }
 
