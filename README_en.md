@@ -108,7 +108,7 @@ git clone https://github.com/Yaahua/vcam.git
 ./gradlew assembleRelease
 ```
 
-For detailed development log and troubleshooting, see [docs/DEVELOPMENT_LOG.md](./docs/DEVELOPMENT_LOG.md)
+For detailed development log and troubleshooting, see [docs/DEVELOPMENT_LOG.md](./docs/DEVELOPMENT_LOG.md) and [PITFALL_LOG.md](./PITFALL_LOG.md)
 
 ### Tech Stack
 

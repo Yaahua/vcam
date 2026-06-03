@@ -250,5 +250,65 @@ VCAM 作为标准 Xposed 模块，完全兼容 LSPatch：
 
 ---
 
-*最后更新：2025-01-23*
+## 七、v5.4: MicrophoneHandler → ConfigWatcher 阻塞修复
+
+### 背景
+
+v5.3 修复了热切换机制后，实测发现 ConfigWatcher 仍然没有初始化。经过全链路诊断日志注入，定位到 `MicrophoneHandler.init()` 抛异常后直接跳过了后面所有的初始化代码。
+
+### 问题链
+
+```
+HookMain.handleLoadPackage() {
+    Camera1Handler.init();        // ✅ 成功
+    Camera2Handler.init();        // ✅ 成功
+    MicrophoneHandler.init();     // ❌ NoSuchMethodError → 穿透
+    initConfigWatcher();          // 💀 永远执行不到
+}
+```
+
+### 根因
+
+`NoSuchMethodError` 继承自 `Error`，不是 `Exception`。`catch (Exception)` 捕不住它。
+
+```
+Throwable
+├── Exception      ← catch (Exception) 捕住
+└── Error          ← 穿透！需要 catch (Throwable)
+    └── NoSuchMethodError
+```
+
+### 修复
+
+1. `HookMain.java`: `MicrophoneHandler.init()` 外层 `try/catch(Throwable)`
+2. `MicrophoneHandler.java`: 2 处 `catch(Exception)` → `catch(Throwable)`
+
+### 教训
+
+Xposed 模块中 Hook 目标 App 的方法签名时，**永远用 `catch(Throwable)`**。目标 App 版本更新可能随时改变方法签名，导致 `NoSuchMethodError`/`NoClassDefFoundError`。
+
+---
+
+## 八、CI/CD 与发布说明
+
+### GitHub Actions 自动构建
+
+每次 push 到 `main` 分支自动触发 `Build VCAM APK` workflow：
+- 构建产物：`app-release.apk`（约 9.78 MB）
+- 保留期限：90 天
+- 下载方式：需登录 GitHub → Actions → 选择构建 → Artifacts 中下载
+
+### 常见下载问题
+
+1. **需要登录**: Actions artifacts 不是公开的，未登录无法下载
+2. **文件名相同**: 每次构建产物都叫 `app-release.apk`，无法从文件名区分版本
+3. **页面缓存**: 浏览器可能缓存旧的 Actions 页面
+
+### 建议
+
+稳定版本应手动创建 GitHub Release，附上 APK 和 changelog，方便公开下载和版本追踪。
+
+---
+
+*最后更新：2026-06-03*
 *维护者：Yaahua*

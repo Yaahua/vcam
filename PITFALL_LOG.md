@@ -105,3 +105,95 @@ private val configManager = ConfigManager().apply { setContext(application) }
 | `HookMain.java` | onMediaSourceChanged 加 disable 检查 |
 | `Camera1Handler.java` | reloadVideo + stopAllPlayers |
 | `Camera2SessionHook.java` | reloadVideo + stopAllPlayers |
+
+---
+
+## 踩坑5: MicrophoneHandler 异常穿透导致 ConfigWatcher 完全不初始化
+
+**现象**: 修复踩坑2/3/4 后，ConfigWatcher 仍然没有任何日志输出，热切换完全失效。
+
+**根因链**:
+1. `HookMain.handleLoadPackage()` 中，`MicrophoneHandler.init(lpparam)` 在第130行
+2. `initConfigWatcher(lpparam)` 在第133行
+3. QQ 新版/某些 ROM 中 `AudioRecord.read(byte[],int)` 方法签名变更 → `NoSuchMethodError`
+4. `NoSuchMethodError` 继承自 `Error`，**不是 `Exception` 的子类**
+5. `MicrophoneHandler.java` 里 `catch (Exception e)` **捕不住 Error**
+6. 异常穿透到 `handleLoadPackage()`，而第130行**没有外层 try-catch**
+7. → 方法提前退出 → 第133行 `initConfigWatcher` **被跳过** → 热切换完全失效
+
+**Java 异常继承链**:
+```
+Throwable
+├── Exception      ← catch (Exception) 能捕住
+│   └── RuntimeException
+│       └── ... 各种运行时异常
+└── Error          ← catch (Exception) 捕不住！
+    └── NoSuchMethodError  ← 方法签名不匹配时抛出
+```
+
+**修复** (v5.4):
+| 文件 | 改动 |
+|------|------|
+| `HookMain.java` | `MicrophoneHandler.init()` 外层加 `try/catch(Throwable)`，失败不影响 ConfigWatcher |
+| `MicrophoneHandler.java` | 2 处 `catch(Exception)` → `catch(Throwable)`，防止 Error 穿透 |
+
+**教训**: 
+- Xposed Hook 代码中**永远用 `catch (Throwable)` 而不是 `catch (Exception)`**——目标 App 的任何方法签名变更都可能抛 `NoSuchMethodError`/`NoClassDefFoundError`
+- Hook 入口函数中，子模块初始化必须各自包裹 try-catch，不能让一个模块的失败拖垮整个 Hook
+
+**验证方式**:
+修复后打开 QQ，logcat 过滤 `LSPosed-Bridge.*【VCAM】`：
+- ✅ 看到 `【VCAM】【CS】初始化配置监听` → ConfigWatcher 正常工作
+- ✅ 可能看到 `【VCAM】Microphone AudioRecord Hook 失败: NoSuchMethodError` → 不影响热切换
+
+---
+
+## 踩坑6: GitHub Actions 构建产物下载总是旧版本
+
+**现象**: 从 GitHub Actions 页面下载 APK 安装后，代码是旧的，热切换不生效。但在终端用 API 下载安装就是新的。
+
+**根因**:
+
+1. **认证墙**: GitHub Actions artifacts **不是公开的**。未登录 GitHub 时访问 Actions 页面会看到 "Sign in to view logs"，artifact 下载链接也会被拦截。浏览器退回到某个可访问的旧页面/缓存。
+
+2. **命名混淆**: 所有 CI 构建产物的文件名都是 `app-release.apk`，仅靠文件名无法区分是哪个提交构建的。下载后覆盖到手机，新旧不分。
+
+3. **构建列表排序**: Actions 页面按提交时间倒序排列，最新构建在最上面。但如果在 CI 构建完成前就打开页面（或页面缓存），看到的可能是旧构建。
+
+4. **Release ≠ Artifact**: GitHub 有两种发布方式：
+   - **Release**: 手动创建，上传 APK。本项目从未创建过 Release（页面显示 "There aren't any releases here"）
+   - **Actions Artifact**: CI 自动构建产物，每次 push 都会生成，但需要登录 GitHub 且知道在哪个 build 里找
+
+**解决**:
+| 方式 | 可靠性 | 说明 |
+|------|--------|------|
+| 浏览器打开 Actions | ❌ 低 | 需要登录、容易选错构建、文件名相同 |
+| API + token 下载 | ✅ 高 | 精确指定 artifact ID，对应确切 commit |
+| 创建 Release | ✅ 最高 | 手动发布命名版本，公开可访问，有版本号 |
+
+**建议**: 每次稳定版本手动创建 GitHub Release，附上 APK 和 changelog，避免混淆。
+
+---
+
+## 踩坑7: Git Push 超时——终端会话污染
+
+**现象**: 在 `super_admin:terminal` 中执行 `git push` 经常超时（30秒无响应），但实际 push 已经成功。
+
+**根因**:
+- `super_admin:terminal` 使用**共享终端会话**（默认 session `super_admin_default_session`）
+- 前面的命令（如 `./gradlew assembleDebug`）如果在超时后继续在后台运行，会话被阻塞
+- 新的 git 命令在同一个会话中排队，等到超时都没执行
+- 多次重复提交导致本地领先远程 N 个 commit
+
+**解决**:
+| 方式 | 说明 |
+|------|------|
+| 用 `github:terminal_exec` | 独立会话，不受前面命令影响 |
+| 每次传不同 `session_name` | 隔离会话 |
+| `terminal_wait` | 等前一个命令完成再执行 |
+
+**教训**: 编译和 git 操作不要共用同一个终端会话。编译耗时不定，超时后的残留进程会阻塞后续所有命令。<｜end▁of▁thinking｜>现在更新 DEVELOPMENT_LOG.md：
+
+<｜｜DSML｜｜tool_calls>
+<｜｜DSML｜｜invoke name="edit_file">
+<｜｜DSML｜｜parameter name="environment" string="true">linux
