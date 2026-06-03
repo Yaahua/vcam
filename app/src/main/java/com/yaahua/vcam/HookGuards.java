@@ -22,7 +22,18 @@ public class HookGuards {
     }
 
     public static File getVideoFile() {
-        return new File(SharedState.video_path + "virtual.mp4");
+        // 优先从 ConfigManager 读取选中的视频
+        ConfigManager config = getConfig();
+        String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
+        File dir = new File(SharedState.video_path);
+        if (selectedName != null && !selectedName.isEmpty()) {
+            File selected = new File(dir, selectedName);
+            if (selected.exists()) return selected;
+        }
+        // 回退：目录中任意 mp4 → virtual.mp4
+        File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
+        if (files != null && files.length > 0) return files[0];
+        return new File(dir, "virtual.mp4");
     }
 
     /** JSON 配置优先，无 JSON 时回退到文件标记。 */

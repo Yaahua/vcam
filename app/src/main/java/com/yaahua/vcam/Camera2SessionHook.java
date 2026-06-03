@@ -250,7 +250,7 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
-                SharedState.c2_hw_decode_obj.decode(SharedState.video_path + "virtual.mp4");
+                SharedState.c2_hw_decode_obj.decode(HookGuards.getVideoFile().getAbsolutePath());
             } catch (Throwable throwable) {
                 XposedBridge.log("【VCAM】" + throwable);
             }
@@ -270,7 +270,7 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
-                SharedState.c2_hw_decode_obj_1.decode(SharedState.video_path + "virtual.mp4");
+                SharedState.c2_hw_decode_obj_1.decode(HookGuards.getVideoFile().getAbsolutePath());
             } catch (Throwable throwable) {
                 XposedBridge.log("【VCAM】" + throwable);
             }
@@ -295,7 +295,7 @@ public class Camera2SessionHook {
                         SharedState.c2_player.start();
                     }
                 });
-                SharedState.c2_player.setDataSource(SharedState.video_path + "virtual.mp4");
+                SharedState.c2_player.setDataSource(HookGuards.getVideoFile().getAbsolutePath());
                 SharedState.c2_player.prepare();
             } catch (Exception e) {
                 XposedBridge.log("【VCAM】[c2player][" + SharedState.c2_preview_Surfcae.toString() + "]" + e);
@@ -321,7 +321,7 @@ public class Camera2SessionHook {
                         SharedState.c2_player_1.start();
                     }
                 });
-                SharedState.c2_player_1.setDataSource(SharedState.video_path + "virtual.mp4");
+                SharedState.c2_player_1.setDataSource(HookGuards.getVideoFile().getAbsolutePath());
                 SharedState.c2_player_1.prepare();
             } catch (Exception e) {
                 XposedBridge.log("【VCAM】[c2player1]" + "[ " + SharedState.c2_preview_Surfcae_1.toString() + "]" + e);

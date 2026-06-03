@@ -137,7 +137,7 @@ public class Camera1Handler {
                         }
                     });
                     try {
-                        SharedState.mplayer1.setDataSource(SharedState.video_path + "virtual.mp4");
+                        SharedState.mplayer1.setDataSource(HookGuards.getVideoFile().getAbsolutePath());
                         SharedState.mplayer1.prepare();
                     } catch (IOException e) {
                         XposedBridge.log("【VCAM】" + e.toString());
@@ -173,7 +173,7 @@ public class Camera1Handler {
                         }
                     });
                     try {
-                        SharedState.mMediaPlayer.setDataSource(SharedState.video_path + "virtual.mp4");
+                        SharedState.mMediaPlayer.setDataSource(HookGuards.getVideoFile().getAbsolutePath());
                         SharedState.mMediaPlayer.prepare();
                     } catch (IOException e) {
                         XposedBridge.log("【VCAM】" + e.toString());
@@ -357,7 +357,7 @@ public class Camera1Handler {
                     }
                     SharedState.hw_decode_obj = new VideoToFrames();
                     SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
-                    SharedState.hw_decode_obj.decode(SharedState.video_path + "virtual.mp4");
+                    SharedState.hw_decode_obj.decode(HookGuards.getVideoFile().getAbsolutePath());
                     while (SharedState.data_buffer == null) {
                         // wait
                     }

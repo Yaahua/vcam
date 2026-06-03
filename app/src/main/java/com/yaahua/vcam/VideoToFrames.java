@@ -31,7 +31,7 @@ public class VideoToFrames implements Runnable {
 
     private LinkedBlockingQueue<byte[]> mQueue;
     private OutputImageFormat outputImageFormat;
-    private boolean stopDecode = false;
+    private volatile boolean stopDecode = false;
 
     private String videoFilePath;
     private Throwable throwable;
