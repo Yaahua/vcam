@@ -244,7 +244,12 @@ public class ConfigManager {
                 String videoName = getString(KEY_SELECTED_VIDEO, "virtual.mp4");
                 File videoFile = null;
                 if (videoName != null && !videoName.isEmpty()) {
-                    videoFile = new File(DEFAULT_CONFIG_DIR, videoName);
+                    // 支持绝对路径
+                    if (videoName.startsWith("/")) {
+                        File absFile = new File(videoName);
+                        if (absFile.exists() && !absFile.isDirectory()) videoFile = absFile;
+                    }
+                    if (videoFile == null) videoFile = new File(DEFAULT_CONFIG_DIR, videoName);
                 }
                 if (videoFile == null || !videoFile.exists()) {
                     File[] files = new File(DEFAULT_CONFIG_DIR)

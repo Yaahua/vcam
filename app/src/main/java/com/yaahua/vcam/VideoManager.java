@@ -49,6 +49,24 @@ public class VideoManager {
         return configManager;
     }
 
+    /**
+     * 解析 selected_video 值对应的文件。支持绝对路径和相对路径（相对 video_path）。
+     * 返回 null 表示文件不存在。
+     */
+    private static File resolveVideoFile(String selectedValue, File dir) {
+        if (selectedValue == null || selectedValue.isEmpty()) return null;
+        // 绝对路径
+        if (selectedValue.startsWith("/")) {
+            File f = new File(selectedValue);
+            if (f.exists() && !f.isDirectory()) return f;
+            return null;
+        }
+        // 相对路径
+        File f = new File(dir, selectedValue);
+        if (f.exists() && !f.isDirectory()) return f;
+        return null;
+    }
+
     public static void updateVideoPath(boolean forceRandom) {
         synchronized (pathLock) {
             ConfigManager config = getConfig();
@@ -59,8 +77,8 @@ public class VideoManager {
                 if (forceRandom) pickRandomVideoToConfig(config);
                 String selected = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
                 if (selected != null) {
-                    File f = new File(video_path, selected);
-                    if (f.exists()) {
+                    File f = resolveVideoFile(selected, dir);
+                    if (f != null) {
                         current_video_path = f.getAbsolutePath();
                         LogUtil.log("【CS】[Random] 使用: " + current_video_path);
                         return;
@@ -71,8 +89,8 @@ public class VideoManager {
             // 优先使用配置中选中的视频
             String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
             if (selectedName != null && !selectedName.isEmpty()) {
-                File selectedFile = new File(video_path, selectedName);
-                if (selectedFile.exists()) {
+                File selectedFile = resolveVideoFile(selectedName, dir);
+                if (selectedFile != null) {
                     current_video_path = selectedFile.getAbsolutePath();
                     LogUtil.log("【CS】[Video] 使用配置路径: " + current_video_path);
                     return;
@@ -150,12 +168,17 @@ public class VideoManager {
 
         int currentIndex = -1;
         if (current_video_path != null) {
-            for (int i = 0; i < files.length; i++) {
-                if (files[i].getAbsolutePath().equals(current_video_path)) {
-                    currentIndex = i;
-                    break;
+            // 检查当前视频是否在 video_path 目录内
+            String currentParent = new File(current_video_path).getParent();
+            if (currentParent != null && currentParent.equals(dir.getAbsolutePath())) {
+                for (int i = 0; i < files.length; i++) {
+                    if (files[i].getAbsolutePath().equals(current_video_path)) {
+                        currentIndex = i;
+                        break;
+                    }
                 }
             }
+            // 如果当前视频在外部（绝对路径），currentIndex 保持 -1，回退到目录第一项
         }
         int newIndex = (currentIndex == -1) ? 0
                 : (next ? (currentIndex + 1) % files.length : (currentIndex - 1 + files.length) % files.length);

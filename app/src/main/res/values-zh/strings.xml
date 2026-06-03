@@ -6,4 +6,6 @@
     <string name="permission_description">访问本地目录的权限用于设定配置文件，如果拒绝，您需要手动设定配置文件。</string>
     <string name="positive">确定</string>
     <string name="negative">拒绝</string>
+    <string name="import_to_camera_dir">导入到 Camera1 目录（拷贝）</string>
+    <string name="select_from_storage">从存储选择（引用原文件）</string>
 </resources>

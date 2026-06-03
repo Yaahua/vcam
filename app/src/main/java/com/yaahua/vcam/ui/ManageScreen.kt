@@ -29,12 +29,25 @@ import java.util.Locale
 @Composable
 fun ManageScreen(viewModel: MediaViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    var showFabMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
 
-    val videoLauncher = rememberLauncherForActivityResult(
+    val videoImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) viewModel.importFiles(uris, false)
+    }
+
+    val videoRefLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            // 尝试从 content URI 解析文件路径
+            val path = tryResolveFilePath(uri)
+            if (path != null) {
+                viewModel.selectVideoByAbsolutePath(path)
+            }
+        }
     }
 
     val audioLauncher = rememberLauncherForActivityResult(
@@ -45,15 +58,33 @@ fun ManageScreen(viewModel: MediaViewModel) {
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    when (selectedTab) {
-                        0 -> videoLauncher.launch(arrayOf("video/*"))
-                        1 -> audioLauncher.launch(arrayOf("audio/*"))
-                    }
+            Box {
+                DropdownMenu(
+                    expanded = showFabMenu,
+                    onDismissRequest = { showFabMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.import_to_camera_dir)) },
+                        onClick = {
+                            showFabMenu = false
+                            videoImportLauncher.launch(arrayOf("video/*"))
+                        },
+                        leadingIcon = { Icon(Icons.Default.Add, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.select_from_storage)) },
+                        onClick = {
+                            showFabMenu = false
+                            videoRefLauncher.launch(arrayOf("video/*"))
+                        },
+                        leadingIcon = { Icon(Icons.Default.VideoLibrary, null) }
+                    )
                 }
-            ) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.desc_add_media))
+                FloatingActionButton(
+                    onClick = { showFabMenu = true }
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.desc_add_media))
+                }
             }
         },
         bottomBar = {
@@ -116,10 +147,27 @@ fun ManageScreen(viewModel: MediaViewModel) {
                                 name = video.name,
                                 sizeMb = video.size / 1048576.0,
                                 durationMs = video.durationMs,
-                                isSelected = video.name == uiState.selectedVideoName,
+                                isSelected = isVideoSelected(video, uiState.selectedVideoName),
+                                isExternal = video.file.absolutePath.startsWith("/")
+                                    && video.file.parent != "/storage/emulated/0/DCIM/Camera1",
                                 isAudio = false,
-                                onSelect = { viewModel.selectVideo(video.name) },
-                                onDelete = { viewModel.deleteFile(video.file) }
+                                onSelect = {
+                                    // 外部视频用绝对路径，内部视频用文件名
+                                    if (video.file.absolutePath.startsWith("/")
+                                        && video.file.parent != "/storage/emulated/0/DCIM/Camera1") {
+                                        viewModel.selectVideoByAbsolutePath(video.file.absolutePath)
+                                    } else {
+                                        viewModel.selectVideo(video.name)
+                                    }
+                                },
+                                onDelete = {
+                                    // 外部视频只能取消选择不能删除
+                                    if (video.file.parent == "/storage/emulated/0/DCIM/Camera1") {
+                                        viewModel.deleteFile(video.file)
+                                    } else {
+                                        viewModel.selectVideoByAbsolutePath(video.file.absolutePath)
+                                    }
+                                }
                             )
                         }
                         if (uiState.videos.isEmpty()) {
@@ -136,6 +184,7 @@ fun ManageScreen(viewModel: MediaViewModel) {
                                 sizeMb = audio.size / 1048576.0,
                                 durationMs = audio.durationMs,
                                 isSelected = audio.name == uiState.selectedAudioName,
+                                isExternal = false,
                                 isAudio = true,
                                 onSelect = { viewModel.selectAudio(audio.name) },
                                 onDelete = { viewModel.deleteFile(audio.file) }
@@ -155,6 +204,31 @@ fun ManageScreen(viewModel: MediaViewModel) {
     }
 }
 
+private fun isVideoSelected(video: VideoItem, selectedVideoName: String?): Boolean {
+    if (selectedVideoName == null) return false
+    // 支持绝对路径匹配
+    if (selectedVideoName.startsWith("/")) {
+        return video.file.absolutePath == selectedVideoName
+    }
+    return video.name == selectedVideoName
+}
+
+private fun tryResolveFilePath(uri: android.net.Uri): String? {
+    // content URI 路径可能包含编码
+    val rawPath = uri.path ?: return null
+    // /document/primary:Download/myvideo.mp4
+    if (rawPath.contains(":") && rawPath.contains("primary")) {
+        val afterColon = rawPath.substringAfter(":")
+        val decoded = java.net.URLDecoder.decode(afterColon, "UTF-8")
+        return "/storage/emulated/0/$decoded"
+    }
+    // /external/video/media/123
+    if (rawPath.startsWith("/external/")) return null // 无法简单解析
+    // /storage/emulated/0/...
+    if (rawPath.startsWith("/storage/")) return rawPath
+    return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MediaCard(
@@ -162,6 +236,7 @@ private fun MediaCard(
     sizeMb: Double,
     durationMs: Long,
     isSelected: Boolean,
+    isExternal: Boolean,
     isAudio: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit
@@ -187,8 +262,25 @@ private fun MediaCard(
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.weight(1f, fill = false))
+                    if (isExternal) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(
+                            shape = MaterialTheme.shapes.extraSmall,
+                            color = MaterialTheme.colorScheme.secondaryContainer,
+                        ) {
+                            Text(
+                                "外部",
+                                fontSize = 10.sp,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(4.dp))
                 Row {
                     Text(String.format(Locale.getDefault(), "%.1f MB", sizeMb),
@@ -207,8 +299,13 @@ private fun MediaCard(
                 Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(8.dp))
             }
+            // 外部文件显示取消选择图标而非删除图标
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error)
+                Icon(
+                    if (isExternal) Icons.Default.CheckCircle else Icons.Default.Delete,
+                    null,
+                    tint = if (isExternal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                )
             }
         }
     }

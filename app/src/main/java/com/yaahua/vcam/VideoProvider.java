@@ -115,7 +115,12 @@ public class VideoProvider extends ContentProvider {
         File videoFile = null;
 
         if (videoName != null && !videoName.isEmpty()) {
-            videoFile = new File(videoDir, videoName);
+            // 支持绝对路径
+            if (videoName.startsWith("/")) {
+                File absFile = new File(videoName);
+                if (absFile.exists() && !absFile.isDirectory()) videoFile = absFile;
+            }
+            if (videoFile == null) videoFile = new File(videoDir, videoName);
         }
 
         // fallback to virtual.mp4

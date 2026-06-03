@@ -7,4 +7,6 @@
     <string name="permission_description">The permission to access local storage is used to set up configuration files. If refused you need to set up file manually.</string>
     <string name="positive">Sure</string>
     <string name="negative">Refuse</string>
+    <string name="import_to_camera_dir">Import to Camera1 (copy)</string>
+    <string name="select_from_storage">Select from storage (reference)</string>
 </resources>

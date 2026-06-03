@@ -87,6 +87,8 @@
     <string name="desc_add_media">添加媒体</string>
     <string name="status_no_video">暂无视频文件</string>
     <string name="status_no_audio">暂无音频文件</string>
+    <string name="import_to_camera_dir">导入到 Camera1 目录（拷贝）</string>
+    <string name="select_from_storage">从存储选择（引用原文件）</string>
 
     <!-- About -->
     <string name="about_title">关于</string>

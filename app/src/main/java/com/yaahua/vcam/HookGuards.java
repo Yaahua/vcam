@@ -46,8 +46,13 @@ public class HookGuards {
         String selectedName = config.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         File dir = new File(SharedState.video_path);
         if (selectedName != null && !selectedName.isEmpty()) {
+            // 支持绝对路径：直接引用任意位置的文件
+            if (selectedName.startsWith("/")) {
+                File absolute = new File(selectedName);
+                if (absolute.exists() && !absolute.isDirectory()) return absolute;
+            }
             File selected = new File(dir, selectedName);
-            if (selected.exists()) return selected;
+            if (selected.exists() && !selected.isDirectory()) return selected;
         }
         // 回退：目录中任意 mp4 → virtual.mp4
         File[] files = dir.listFiles((d, name) -> name.toLowerCase().endsWith(".mp4"));
