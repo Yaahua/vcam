@@ -129,11 +129,12 @@ public class NotificationService extends Service {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true);
 
-        // 进度条
+        // 进度条：有视频时显示实际进度，无视频时不显示
         if (durMs > 0) {
             builder.setProgress((int) durMs, (int) posMs, false);
         } else {
-            builder.setProgress(0, 0, true);
+            // 无视频时不显示进度条，避免一直转圈
+            // builder.setProgress(0, 0, true);
         }
 
         builder.addAction(new Notification.Action.Builder(null,
