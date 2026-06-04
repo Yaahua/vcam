@@ -37,6 +37,7 @@ fun ManageScreen(viewModel: MediaViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
     var showFabMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
 
     val videoImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
@@ -48,8 +49,7 @@ fun ManageScreen(viewModel: MediaViewModel) {
         ActivityResultContracts.OpenDocument()
     ) { uri ->
         if (uri != null) {
-            // 尝试从 content URI 解析文件路径
-            val path = tryResolveFilePath(uri)
+            val path = tryResolveFilePath(uri, context)
             if (path != null) {
                 viewModel.selectVideoByAbsolutePath(path)
             }
@@ -233,19 +233,47 @@ private fun isVideoSelected(video: VideoItem, selectedVideoName: String?): Boole
     return video.name == selectedVideoName
 }
 
-private fun tryResolveFilePath(uri: android.net.Uri): String? {
-    // content URI 路径可能包含编码
-    val rawPath = uri.path ?: return null
-    // /document/primary:Download/myvideo.mp4
-    if (rawPath.contains(":") && rawPath.contains("primary")) {
-        val afterColon = rawPath.substringAfter(":")
-        val decoded = java.net.URLDecoder.decode(afterColon, "UTF-8")
-        return "/storage/emulated/0/$decoded"
+private fun tryResolveFilePath(uri: android.net.Uri, context: android.content.Context? = null): String? {
+    val path = uri.path ?: return null
+
+    // file:// 直接返回路径
+    if (uri.scheme == "file") return path
+
+    // 只处理 content://
+    if (uri.scheme != "content") return null
+
+    // URL 解码（路径可能包含 %3A 等编码）
+    val decoded = try { java.net.URLDecoder.decode(path, "UTF-8") } catch (_: Exception) { path }
+
+    // com.android.externalstorage.documents: /document/primary:Download/video.mp4
+    // 或 /document/1A2B-3C4D:video.mp4 (SD卡)
+    if (decoded.startsWith("/document/")) {
+        val docId = decoded.removePrefix("/document/")
+        val colonIdx = docId.indexOf(':')
+        if (colonIdx != -1) {
+            val volume = docId.substring(0, colonIdx)
+            val filePath = docId.substring(colonIdx + 1)
+            return if (volume == "primary") "/storage/emulated/0/$filePath"
+                   else "/storage/$volume/$filePath"
+        }
     }
-    // /external/video/media/123
-    if (rawPath.startsWith("/external/")) return null // 无法简单解析
-    // /storage/emulated/0/...
-    if (rawPath.startsWith("/storage/")) return rawPath
+
+    // MediaStore 回退：通过 _data 列获取绝对路径
+    if (context != null) {
+        try {
+            val proj = arrayOf(android.provider.MediaStore.MediaColumns.DATA)
+            context.contentResolver.query(uri, proj, null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) {
+                    val idx = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns.DATA)
+                    return cursor.getString(idx)
+                }
+            }
+        } catch (_: Exception) { /* 静默失败 */ }
+    }
+
+    // /storage/ 直接路径
+    if (decoded.startsWith("/storage/")) return decoded
+
     return null
 }
 
@@ -295,6 +323,7 @@ private fun MediaCard(
                         val request = remember(videoPath) {
                             ImageRequest.Builder(context)
                                 .data(videoPath)
+                                .videoFrameMillis(1000) // 取第1秒帧
                                 .memoryCachePolicy(CachePolicy.ENABLED)
                                 .diskCachePolicy(CachePolicy.ENABLED)
                                 .crossfade(true)
