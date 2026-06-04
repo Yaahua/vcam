@@ -236,6 +236,9 @@ public class Camera2SessionHook {
 
     // ======================== processCamera2Play ========================
     public static void processCamera2Play() {
+        // 记录当前视频路径，供通知栏和断点续传使用
+        File videoFile = HookGuards.getVideoFile();
+        if (videoFile != null) SharedState.currentVideoPath = videoFile.getAbsolutePath();
         // Reader Surface 1
         if (SharedState.c2_reader_Surfcae != null) {
             if (SharedState.c2_hw_decode_obj != null) {
@@ -372,6 +375,24 @@ public class Camera2SessionHook {
 
         XposedBridge.log("【VCAM】热切换视频 → " + newPath + " 声音=" + playSound);
 
+        // === 断点续传逻辑 ===
+        String oldPath = SharedState.currentVideoPath;
+        SharedState.currentVideoPath = newPath;
+        long resumePos = 0;
+        if (newPath.equals(oldPath)) {
+            // 同一视频 → 断点续传
+            Long saved = SharedState.videoPositions.get(newPath);
+            resumePos = (saved != null) ? saved : 0;
+        } else {
+            // 换视频 → 从头开始，保存旧视频位置
+            if (oldPath != null && SharedState.c2_hw_decode_obj != null) {
+                SharedState.videoPositions.put(oldPath, SharedState.c2_hw_decode_obj.getCurrentPositionMs());
+            }
+            SharedState.videoPositions.remove(newPath);
+        }
+        SharedState.seekPositionMs = resumePos;
+        // ======================
+
         // Reader Surface 1 — 若被 stopAllPlayers 置 null 则重建
         if (SharedState.c2_reader_Surfcae != null) {
             try {
@@ -387,6 +408,8 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
+                if (resumePos > 0) SharedState.c2_hw_decode_obj.seekTo(resumePos);
+                if (SharedState.playPaused) SharedState.c2_hw_decode_obj.setPaused(true);
                 SharedState.c2_hw_decode_obj.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader1 失败: " + t);
@@ -408,6 +431,8 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
+                if (resumePos > 0) SharedState.c2_hw_decode_obj_1.seekTo(resumePos);
+                if (SharedState.playPaused) SharedState.c2_hw_decode_obj_1.setPaused(true);
                 SharedState.c2_hw_decode_obj_1.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】热切换 reader2 失败: " + t);

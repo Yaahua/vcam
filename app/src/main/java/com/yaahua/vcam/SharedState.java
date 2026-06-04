@@ -63,4 +63,11 @@ public class SharedState {
     public static String video_path = "/storage/emulated/0/DCIM/Camera1/";
     public static boolean need_to_show_toast = true;
     public static Context toast_content;
+
+    // ========== 播放控制 ==========
+    public static volatile long seekPositionMs = -1;  // <0 表示不seek
+    public static volatile boolean playPaused = false;
+    public static volatile String currentVideoPath = null;
+    // 断点续传：Map<文件路径, 播放位置ms>
+    public static final java.util.Map<String, Long> videoPositions = new java.util.concurrent.ConcurrentHashMap<>();
 }

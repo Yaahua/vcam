@@ -44,6 +44,7 @@ public class ConfigManager {
     public static final String KEY_ENABLE_MIC_HOOK = "enable_mic_hook";
     public static final String KEY_MIC_HOOK_MODE = "mic_hook_mode";
     public static final String KEY_SELECTED_AUDIO = "selected_audio";
+    public static final String KEY_VIDEO_POSITIONS = "video_positions";
     public static final String KEY_NOTIFICATION_CONTROL_ENABLED = "notification_control_enabled";
     public static final String KEY_OVERLAY_CONTROL_ENABLED = "overlay_control_enabled";
     public static final String MIC_MODE_MUTE = "mute";

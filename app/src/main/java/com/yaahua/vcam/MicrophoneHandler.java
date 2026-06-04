@@ -2,6 +2,9 @@ package com.yaahua.vcam;
 
 import android.hardware.Camera;
 import android.media.AudioRecord;
+import android.media.MediaCodec;
+import android.media.MediaExtractor;
+import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.widget.Toast;
@@ -49,7 +52,7 @@ public class MicrophoneHandler {
                         // 静音：填充零值
                         Arrays.fill(buffer, offset, offset + size, (byte) 0);
                         param.setResult(size);
-                    } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode)) {
+                    } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
                         // 替换：用预录制音频填充
                         loadAudioDataIfNeeded();
                         if (cachedAudioData != null) {
@@ -77,7 +80,7 @@ public class MicrophoneHandler {
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         Arrays.fill(buffer, offset, buffer.length, (byte) 0);
                         param.setResult(buffer.length - offset);
-                    } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode)) {
+                    } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
                         loadAudioDataIfNeeded();
                         if (cachedAudioData != null) {
                             int remaining = cachedAudioData.length - cachedAudioPos;
@@ -105,6 +108,21 @@ public class MicrophoneHandler {
                     if (ConfigManager.MIC_MODE_MUTE.equals(mode)) {
                         Arrays.fill(buffer, offset, offset + size, (short) 0);
                         param.setResult(size);
+                    } else if (ConfigManager.MIC_MODE_REPLACE.equals(mode) || ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
+                        loadAudioDataIfNeeded();
+                        if (cachedAudioData != null) {
+                            int remaining = (cachedAudioData.length - cachedAudioPos) / 2;
+                            if (remaining <= 0) cachedAudioPos = 0;
+                            int copyLen = Math.min(size, remaining);
+                            for (int i = 0; i < copyLen; i++) {
+                                int idx = cachedAudioPos + i * 2;
+                                if (idx + 1 < cachedAudioData.length) {
+                                    buffer[offset + i] = (short) ((cachedAudioData[idx + 1] << 8) | (cachedAudioData[idx] & 0xFF));
+                                }
+                            }
+                            cachedAudioPos += copyLen * 2;
+                            param.setResult(copyLen);
+                        }
                     }
                 }
             });
@@ -116,6 +134,14 @@ public class MicrophoneHandler {
     }
 
     private static void loadAudioDataIfNeeded() {
+        String mode = HookGuards.getConfig().getString(ConfigManager.KEY_MIC_HOOK_MODE, ConfigManager.MIC_MODE_MUTE);
+
+        // video_sync 模式：从视频提取音频轨道
+        if (ConfigManager.MIC_MODE_VIDEO_SYNC.equals(mode)) {
+            loadAudioFromVideo();
+            return;
+        }
+
         String selectedAudio = HookGuards.getConfig().getString(ConfigManager.KEY_SELECTED_AUDIO, null);
         String audioPath = (selectedAudio != null && !selectedAudio.isEmpty())
                 ? new File(ConfigManager.DEFAULT_CONFIG_DIR, selectedAudio).getAbsolutePath()
@@ -156,6 +182,112 @@ public class MicrophoneHandler {
             XposedBridge.log("【VCAM】麦克风音频已加载: " + cachedAudioPath + " (" + cachedAudioData.length + " bytes)");
         } catch (Exception e) {
             XposedBridge.log("【VCAM】加载麦克风音频失败: " + e);
+            cachedAudioData = null;
+        }
+    }
+
+    // 从当前视频文件提取音频轨道（video_sync 模式）
+    private static void loadAudioFromVideo() {
+        try {
+            java.io.File videoFile = HookGuards.getVideoFile();
+            if (videoFile == null || !videoFile.exists()) {
+                cachedAudioData = null;
+                return;
+            }
+            String videoPath = videoFile.getAbsolutePath();
+            if (videoPath.equals(cachedAudioPath) && cachedAudioData != null) return;
+            cachedAudioPath = videoPath;
+            cachedAudioPos = 0;
+
+            MediaExtractor extractor = new MediaExtractor();
+            extractor.setDataSource(videoPath);
+
+            // 查找音频轨道
+            int audioTrack = -1;
+            for (int i = 0; i < extractor.getTrackCount(); i++) {
+                MediaFormat fmt = extractor.getTrackFormat(i);
+                String mime = fmt.getString(MediaFormat.KEY_MIME);
+                if (mime != null && mime.startsWith("audio/")) {
+                    audioTrack = i;
+                    break;
+                }
+            }
+            if (audioTrack < 0) {
+                extractor.release();
+                cachedAudioData = null;
+                XposedBridge.log("【VCAM】视频无音频轨道，video_sync 回退到静音");
+                return;
+            }
+
+            extractor.selectTrack(audioTrack);
+            java.io.ByteArrayOutputStream bos = new java.io.ByteArrayOutputStream();
+            java.nio.ByteBuffer buf = java.nio.ByteBuffer.allocate(65536);
+            MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
+
+            // 尝试用 MediaCodec 解码音频为 PCM
+            MediaFormat fmt = extractor.getTrackFormat(audioTrack);
+            String mime = fmt.getString(MediaFormat.KEY_MIME);
+            MediaCodec decoder = null;
+            boolean sawOutputEOS = false;
+
+            try {
+                decoder = MediaCodec.createDecoderByType(mime);
+                decoder.configure(fmt, null, null, 0);
+                decoder.start();
+
+                while (!sawOutputEOS) {
+                    int inIdx = decoder.dequeueInputBuffer(10000);
+                    if (inIdx >= 0) {
+                        java.nio.ByteBuffer inBuf = decoder.getInputBuffer(inIdx);
+                        int sampleSize = extractor.readSampleData(inBuf, 0);
+                        if (sampleSize < 0) {
+                            decoder.queueInputBuffer(inIdx, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        } else {
+                            long pts = extractor.getSampleTime();
+                            decoder.queueInputBuffer(inIdx, 0, sampleSize, pts, 0);
+                            extractor.advance();
+                        }
+                    }
+                    int outIdx = decoder.dequeueOutputBuffer(info, 10000);
+                    if (outIdx >= 0) {
+                        if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                            sawOutputEOS = true;
+                        }
+                        if (info.size > 0) {
+                            java.nio.ByteBuffer outBuf = decoder.getOutputBuffer(outIdx);
+                            byte[] chunk = new byte[info.size];
+                            outBuf.get(chunk);
+                            bos.write(chunk);
+                        }
+                        decoder.releaseOutputBuffer(outIdx, false);
+                    }
+                }
+            } catch (Exception e) {
+                XposedBridge.log("【VCAM】音频解码失败，尝试直接提取原始数据: " + e);
+                // 回退：直接读取原始压缩数据
+                extractor.seekTo(0, 0);
+                while (true) {
+                    buf.clear();
+                    int n = extractor.readSampleData(buf, 0);
+                    if (n < 0) break;
+                    byte[] chunk = new byte[n];
+                    buf.position(0);
+                    buf.get(chunk);
+                    bos.write(chunk);
+                    extractor.advance();
+                }
+            }
+
+            if (decoder != null) {
+                decoder.stop();
+                decoder.release();
+            }
+            extractor.release();
+
+            cachedAudioData = bos.toByteArray();
+            XposedBridge.log("【VCAM】video_sync 音频已提取: " + cachedAudioData.length + " bytes");
+        } catch (Exception e) {
+            XposedBridge.log("【VCAM】video_sync 提取音频失败: " + e);
             cachedAudioData = null;
         }
     }

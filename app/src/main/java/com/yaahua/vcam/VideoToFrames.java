@@ -32,7 +32,10 @@ public class VideoToFrames implements Runnable {
     private LinkedBlockingQueue<byte[]> mQueue;
     private OutputImageFormat outputImageFormat;
     private volatile boolean stopDecode = false;
-
+    private volatile long seekToTimeUs = -1;  // <0 表示不seek
+    private volatile boolean paused = false;
+    private volatile long currentPositionUs = 0;
+    private volatile long videoDurationUs = 0;
     private String videoFilePath;
     private Throwable throwable;
     private Thread childThread;
@@ -65,6 +68,21 @@ public class VideoToFrames implements Runnable {
 
     public void stopDecode() {
         stopDecode = true;
+    }
+    public void seekTo(long timeMs) {
+        this.seekToTimeUs = timeMs * 1000;
+    }
+    public void setPaused(boolean p) {
+        this.paused = p;
+    }
+    public boolean isPaused() {
+        return paused;
+    }
+    public long getCurrentPositionMs() {
+        return currentPositionUs / 1000;
+    }
+    public long getDurationMs() {
+        return videoDurationUs / 1000;
     }
 
     public void decode(String videoFilePath) throws Throwable {
@@ -101,6 +119,7 @@ public class VideoToFrames implements Runnable {
             }
             extractor.selectTrack(trackIndex);
             MediaFormat mediaFormat = extractor.getTrackFormat(trackIndex);
+            videoDurationUs = mediaFormat.containsKey(MediaFormat.KEY_DURATION) ? mediaFormat.getLong(MediaFormat.KEY_DURATION) : 0;
             String mime = mediaFormat.getString(MediaFormat.KEY_MIME);
             decoder = MediaCodec.createDecoderByType(mime);
             showSupportedColorFormat(decoder.getCodecInfo().getCapabilitiesForType(mime));
@@ -114,7 +133,13 @@ public class VideoToFrames implements Runnable {
             decodeFramesToImage(decoder, extractor, mediaFormat);
             decoder.stop();
             while (!stopDecode) {
-                extractor.seekTo(0, 0);
+                if (seekToTimeUs >= 0) {
+                    extractor.seekTo(seekToTimeUs, 0);
+                    decoder.flush();
+                    seekToTimeUs = -1;
+                } else {
+                    extractor.seekTo(0, 0);
+                }
                 decodeFramesToImage(decoder, extractor, mediaFormat);
                 decoder.stop();
             }
@@ -162,6 +187,10 @@ public class VideoToFrames implements Runnable {
         final int height = mediaFormat.getInteger(MediaFormat.KEY_HEIGHT);
         int outputFrameCount = 0;
         while (!sawOutputEOS && !stopDecode) {
+            while (paused && !stopDecode) {
+                try { Thread.sleep(100); } catch (InterruptedException e) { break; }
+            }
+            if (stopDecode) break;
             if (!sawInputEOS) {
                 int inputBufferId = decoder.dequeueInputBuffer(DEFAULT_TIMEOUT_US);
                 if (inputBufferId >= 0) {
@@ -179,6 +208,7 @@ public class VideoToFrames implements Runnable {
             }
             int outputBufferId = decoder.dequeueOutputBuffer(info, DEFAULT_TIMEOUT_US);
             if (outputBufferId >= 0) {
+                if (info.presentationTimeUs > 0) currentPositionUs = info.presentationTimeUs;
                 if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                     sawOutputEOS = true;
                 }
