@@ -22,12 +22,24 @@ jobs:
           distribution: 'temurin'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: >
-            platforms;android-34
-            build-tools;34.0.0
-          accept-android-sdk-licenses: true
+        run: |
+          SDK_DIR=${{ runner.temp }}/android-sdk
+          echo "ANDROID_SDK_ROOT=${SDK_DIR}" >> $GITHUB_ENV
+          mkdir -p ${SDK_DIR}/cmdline-tools
+          cd ${SDK_DIR}/cmdline-tools
+          curl -fsSL https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdline-tools.zip
+          unzip -q cmdline-tools.zip
+          rm cmdline-tools.zip
+          mv cmdline-tools latest
+          SDKMANAGER="${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager"
+          yes | ${SDKMANAGER} --sdk_root=${SDK_DIR} --licenses > /dev/null 2>&1 || true
+          ${SDKMANAGER} --sdk_root=${SDK_DIR} --install \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "platform-tools" > /dev/null
+
+      - name: Generate local.properties
+        run: echo "sdk.dir=${ANDROID_SDK_ROOT}" > local.properties
 
       - name: Cache Gradle
         uses: actions/cache@v4
