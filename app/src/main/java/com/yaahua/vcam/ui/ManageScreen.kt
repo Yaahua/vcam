@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,11 +39,12 @@ fun ManageScreen(viewModel: MediaViewModel) {
 
     Column(modifier = Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = selectedTab) {
-            tabs.forEachIndexed { index, title ->
+            val tabTitles = tabs
+            for (i in tabTitles.indices) {
                 Tab(
-                    selected = selectedTab == index,
-                    onClick = { selectedTab = index },
-                    text = { Text(title) }
+                    selected = selectedTab == i,
+                    onClick = { selectedTab = i },
+                    text = { Text(text = tabTitles[i]) }
                 )
             }
         }
@@ -89,7 +91,7 @@ fun VideoManageTab(videos: List<VideoItem>, viewModel: MediaViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    stringResource(R.string.status_no_video),
+                    text = stringResource(R.string.status_no_video),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -114,13 +116,13 @@ fun VideoManageTab(videos: List<VideoItem>, viewModel: MediaViewModel) {
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.import_to_camera_dir))
+                Text(text = stringResource(R.string.import_to_camera_dir))
             }
             OutlinedButton(
                 onClick = { selectLauncher.launch(arrayOf("video/*")) },
                 modifier = Modifier.weight(1f)
             ) {
-                Text(stringResource(R.string.select_from_storage))
+                Text(text = stringResource(R.string.select_from_storage))
             }
         }
     }
@@ -143,13 +145,13 @@ fun VideoRow(video: VideoItem, onDelete: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                video.name,
+                text = video.name,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                "${formatFileSize(video.size)}  ${formatDuration(video.durationMs)}",
+                text = "${formatFileSize(video.size)}  ${formatDuration(video.durationMs)}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -181,7 +183,7 @@ fun AudioManageTab(audios: List<AudioItem>, viewModel: MediaViewModel) {
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    stringResource(R.string.status_no_audio),
+                    text = stringResource(R.string.status_no_audio),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -202,7 +204,7 @@ fun AudioManageTab(audios: List<AudioItem>, viewModel: MediaViewModel) {
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(4.dp))
-            Text(stringResource(R.string.desc_add_media))
+            Text(text = stringResource(R.string.desc_add_media))
         }
     }
 }
@@ -224,13 +226,13 @@ fun AudioRow(audio: AudioItem, onDelete: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                audio.name,
+                text = audio.name,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                "${formatFileSize(audio.size)}  ${formatDuration(audio.durationMs)}",
+                text = "${formatFileSize(audio.size)}  ${formatDuration(audio.durationMs)}",
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
