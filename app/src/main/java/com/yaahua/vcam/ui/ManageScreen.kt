@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
-import coil.video.videoFrameMillis
+import coil.request.videoFrameMillis
 import com.yaahua.vcam.R
 import java.io.File
 import java.util.Locale
