@@ -110,6 +110,10 @@ public class Camera1Handler {
                 XposedBridge.log("【VCAM】开始预览");
                 SharedState.start_preview_camera = (Camera) param.thisObject;
 
+                // 记录当前视频路径供通知栏使用
+                File videoFile = HookGuards.getVideoFile();
+                SharedState.currentVideoPath = videoFile.getAbsolutePath();
+
                 // SurfaceHolder 播放器
                 if (SharedState.ori_holder != null) {
                     if (SharedState.mplayer1 == null) {
@@ -357,6 +361,7 @@ public class Camera1Handler {
                     }
                     SharedState.hw_decode_obj = new VideoToFrames();
                     SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
+                    SharedState.currentVideoPath = HookGuards.getVideoFile().getAbsolutePath();
                     SharedState.hw_decode_obj.decode(HookGuards.getVideoFile().getAbsolutePath());
                     while (SharedState.data_buffer == null) {
                         // wait
@@ -496,6 +501,18 @@ public class Camera1Handler {
         boolean playSound = HookGuards.shouldPlaySound();
         XposedBridge.log("【VCAM】Camera1 热切换视频 → " + newPath);
 
+        // === 断点续传逻辑 ===
+        String oldPath = SharedState.currentVideoPath;
+        SharedState.currentVideoPath = newPath;
+        long resumePos = 0;
+        if (oldPath != null && !oldPath.equals(newPath) && SharedState.hw_decode_obj != null) {
+            long oldPos = SharedState.hw_decode_obj.getCurrentPositionMs();
+            if (oldPos > 0) SharedState.videoPositions.put(oldPath, oldPos);
+        }
+        Long saved = SharedState.videoPositions.get(newPath);
+        resumePos = (saved != null) ? saved : 0;
+        // ======================
+
         // MediaPlayer (SurfaceTexture 预览) — 若被 stopAllPlayers 置 null 则重建
         if (SharedState.mSurfacetexture != null) {
             if (SharedState.mMediaPlayer == null) {
@@ -548,6 +565,8 @@ public class Camera1Handler {
                     SharedState.hw_decode_obj = new VideoToFrames();
                     SharedState.hw_decode_obj.setSaveFrames("", OutputImageFormat.NV21);
                 }
+                if (resumePos > 0) SharedState.hw_decode_obj.seekTo(resumePos);
+                if (SharedState.playPaused) SharedState.hw_decode_obj.setPaused(true);
                 SharedState.hw_decode_obj.decode(newPath);
             } catch (Throwable t) {
                 XposedBridge.log("【VCAM】Camera1 热切换 hw_decode 失败: " + t);

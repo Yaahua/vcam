@@ -236,9 +236,26 @@ public class Camera2SessionHook {
 
     // ======================== processCamera2Play ========================
     public static void processCamera2Play() {
-        // 记录当前视频路径，供通知栏和断点续传使用
         File videoFile = HookGuards.getVideoFile();
-        if (videoFile != null) SharedState.currentVideoPath = videoFile.getAbsolutePath();
+        String newPath = (videoFile != null) ? videoFile.getAbsolutePath() : null;
+        if (newPath == null) return;
+
+        // === 断点续传：检查是否有保存的播放位置 ===
+        String oldPath = SharedState.currentVideoPath;
+        SharedState.currentVideoPath = newPath;
+        long resumePos = 0;
+        if (newPath.equals(oldPath)) {
+            // 同一视频继续播放 → 不重置位置
+            return;
+        }
+        // 换视频：保存旧位置，检查新视频是否有存档
+        if (oldPath != null && SharedState.c2_hw_decode_obj != null) {
+            long oldPos = SharedState.c2_hw_decode_obj.getCurrentPositionMs();
+            if (oldPos > 0) SharedState.videoPositions.put(oldPath, oldPos);
+        }
+        Long saved = SharedState.videoPositions.get(newPath);
+        resumePos = (saved != null) ? saved : 0;
+        // ======================
         // Reader Surface 1
         if (SharedState.c2_reader_Surfcae != null) {
             if (SharedState.c2_hw_decode_obj != null) {
@@ -253,6 +270,8 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj.set_surfcae(SharedState.c2_reader_Surfcae);
+                if (resumePos > 0) SharedState.c2_hw_decode_obj.seekTo(resumePos);
+                if (SharedState.playPaused) SharedState.c2_hw_decode_obj.setPaused(true);
                 SharedState.c2_hw_decode_obj.decode(HookGuards.getVideoFile().getAbsolutePath());
             } catch (Throwable throwable) {
                 XposedBridge.log("【VCAM】" + throwable);
@@ -273,6 +292,8 @@ public class Camera2SessionHook {
                     SharedState.c2_hw_decode_obj_1.setSaveFrames("null", OutputImageFormat.NV21);
                 }
                 SharedState.c2_hw_decode_obj_1.set_surfcae(SharedState.c2_reader_Surfcae_1);
+                if (resumePos > 0) SharedState.c2_hw_decode_obj_1.seekTo(resumePos);
+                if (SharedState.playPaused) SharedState.c2_hw_decode_obj_1.setPaused(true);
                 SharedState.c2_hw_decode_obj_1.decode(HookGuards.getVideoFile().getAbsolutePath());
             } catch (Throwable throwable) {
                 XposedBridge.log("【VCAM】" + throwable);
@@ -374,22 +395,25 @@ public class Camera2SessionHook {
         boolean playSound = HookGuards.shouldPlaySound();
 
         XposedBridge.log("【VCAM】热切换视频 → " + newPath + " 声音=" + playSound);
-
-        // === 断点续传逻辑 ===
+// === 断点续传逻辑 ===
         String oldPath = SharedState.currentVideoPath;
         SharedState.currentVideoPath = newPath;
         long resumePos = 0;
+        // 保存旧视频的播放位置
+        if (oldPath != null && !oldPath.equals(newPath) && SharedState.c2_hw_decode_obj != null) {
+            long oldPos = SharedState.c2_hw_decode_obj.getCurrentPositionMs();
+            if (oldPos > 0) SharedState.videoPositions.put(oldPath, oldPos);
+        }
+        // 检查新视频是否有保存的播放位置
         if (newPath.equals(oldPath)) {
-            // 同一视频 → 断点续传
+            // 同一视频热重载 → 断点续传
             Long saved = SharedState.videoPositions.get(newPath);
             resumePos = (saved != null) ? saved : 0;
         } else {
-            // 换视频 → 从头开始，保存旧视频位置
-            if (oldPath != null && SharedState.c2_hw_decode_obj != null) {
-                SharedState.videoPositions.put(oldPath, SharedState.c2_hw_decode_obj.getCurrentPositionMs());
-            }
-            SharedState.videoPositions.remove(newPath);
+            Long saved = SharedState.videoPositions.get(newPath);
+            resumePos = (saved != null) ? saved : 0;
         }
+        // ======================
         SharedState.seekPositionMs = resumePos;
         // ======================
 

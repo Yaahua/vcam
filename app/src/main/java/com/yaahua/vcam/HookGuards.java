@@ -78,29 +78,16 @@ public class HookGuards {
         File dir = new File(SharedState.video_path);
         LogUtil.log("【DIAG】getVideoFile → dir=" + dir.getAbsolutePath() + " selected=" + selectedName);
         if (selectedName != null && !selectedName.isEmpty()) {
-            // 支持绝对路径
-            if (selectedName.startsWith("/")) {
-                File absolute = new File(selectedName);
-                LogUtil.log("【DIAG】getVideoFile → 尝试绝对路径: " + absolute.getAbsolutePath());
-                try {
-                    if (absolute.exists() && !absolute.isDirectory()) {
-                        LogUtil.log("【DIAG】getVideoFile → 命中绝对路径: " + absolute.getName());
-                        return absolute;
-                    }
-                    LogUtil.log("【DIAG】getVideoFile → 绝对路径不存在: " + absolute.getAbsolutePath());
-                } catch (SecurityException e) {
-                    LogUtil.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
-                    return absolute;
-                }
-            }
-            File selected = new File(dir, selectedName);
-            LogUtil.log("【DIAG】getVideoFile → 尝试相对路径: " + selected.getAbsolutePath());
+            // 统一用 Camera1 目录 + 文件名
+            String name = selectedName.contains("/") ? new File(selectedName).getName() : selectedName;
+            File selected = new File(dir, name);
+            LogUtil.log("【DIAG】getVideoFile → 尝试: " + selected.getAbsolutePath());
             try {
                 if (selected.exists() && !selected.isDirectory()) {
-                    LogUtil.log("【DIAG】getVideoFile → 命中相对路径: " + selected.getName());
+                    LogUtil.log("【DIAG】getVideoFile → 命中: " + selected.getName());
                     return selected;
                 }
-                LogUtil.log("【DIAG】getVideoFile → 相对路径不存在: " + selected.getAbsolutePath());
+                LogUtil.log("【DIAG】getVideoFile → 不存在: " + selected.getAbsolutePath());
             } catch (SecurityException e) {
                 LogUtil.log("【DIAG】getVideoFile → SecurityException, 信任路径: " + e);
                 return selected;

@@ -30,7 +30,6 @@ import coil.request.CachePolicy
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 import com.yaahua.vcam.R
-import java.io.File
 import java.util.Locale
 
 @Composable
@@ -38,23 +37,11 @@ fun ManageScreen(viewModel: MediaViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
     var showFabMenu by remember { mutableStateOf(false) }
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
 
     val videoImportLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenMultipleDocuments()
     ) { uris ->
         if (uris.isNotEmpty()) viewModel.importFiles(uris, false)
-    }
-
-    val videoRefLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
-            val path = tryResolveFilePath(uri, context)
-            if (path != null) {
-                viewModel.selectVideoByAbsolutePath(path)
-            }
-        }
     }
 
     val audioLauncher = rememberLauncherForActivityResult(
@@ -71,7 +58,6 @@ fun ManageScreen(viewModel: MediaViewModel) {
                     onDismissRequest = { showFabMenu = false }
                 ) {
                     if (selectedTab == 0) {
-                        // 视频 Tab
                         DropdownMenuItem(
                             text = { Text(text = stringResource(R.string.import_to_camera_dir)) },
                             onClick = {
@@ -80,16 +66,7 @@ fun ManageScreen(viewModel: MediaViewModel) {
                             },
                             leadingIcon = { Icon(Icons.Default.Add, null) }
                         )
-                        DropdownMenuItem(
-                            text = { Text(text = stringResource(R.string.select_from_storage)) },
-                            onClick = {
-                                showFabMenu = false
-                                videoRefLauncher.launch(arrayOf("video/*"))
-                            },
-                            leadingIcon = { Icon(Icons.Default.VideoLibrary, null) }
-                        )
                     } else {
-                        // 音频 Tab
                         DropdownMenuItem(
                             text = { Text(text = stringResource(R.string.import_to_camera_dir)) },
                             onClick = {
@@ -168,27 +145,10 @@ fun ManageScreen(viewModel: MediaViewModel) {
                                 sizeMb = video.size / 1048576.0,
                                 durationMs = video.durationMs,
                                 videoPath = video.file.absolutePath,
-                                isSelected = isVideoSelected(video, uiState.selectedVideoName),
-                                isExternal = video.file.absolutePath.startsWith("/")
-                                    && video.file.parent != "/storage/emulated/0/DCIM/Camera1",
+                                isSelected = video.name == uiState.selectedVideoName,
                                 isAudio = false,
-                                onSelect = {
-                                    // 外部视频用绝对路径，内部视频用文件名
-                                    if (video.file.absolutePath.startsWith("/")
-                                        && video.file.parent != "/storage/emulated/0/DCIM/Camera1") {
-                                        viewModel.selectVideoByAbsolutePath(video.file.absolutePath)
-                                    } else {
-                                        viewModel.selectVideo(video.name)
-                                    }
-                                },
-                                onDelete = {
-                                    // 外部视频只能取消选择不能删除
-                                    if (video.file.parent == "/storage/emulated/0/DCIM/Camera1") {
-                                        viewModel.deleteFile(video.file)
-                                    } else {
-                                        viewModel.selectVideoByAbsolutePath(video.file.absolutePath)
-                                    }
-                                }
+                                onSelect = { viewModel.selectVideo(video.name) },
+                                onDelete = { viewModel.deleteFile(video.file) }
                             )
                         }
                         if (uiState.videos.isEmpty()) {
@@ -205,7 +165,6 @@ fun ManageScreen(viewModel: MediaViewModel) {
                                 sizeMb = audio.size / 1048576.0,
                                 durationMs = audio.durationMs,
                                 isSelected = audio.name == uiState.selectedAudioName,
-                                isExternal = false,
                                 isAudio = true,
                                 onSelect = { viewModel.selectAudio(audio.name) },
                                 onDelete = { viewModel.deleteFile(audio.file) }
@@ -225,59 +184,6 @@ fun ManageScreen(viewModel: MediaViewModel) {
     }
 }
 
-private fun isVideoSelected(video: VideoItem, selectedVideoName: String?): Boolean {
-    if (selectedVideoName == null) return false
-    // 支持绝对路径匹配
-    if (selectedVideoName.startsWith("/")) {
-        return video.file.absolutePath == selectedVideoName
-    }
-    return video.name == selectedVideoName
-}
-
-private fun tryResolveFilePath(uri: android.net.Uri, context: android.content.Context? = null): String? {
-    val path = uri.path ?: return null
-
-    // file:// 直接返回路径
-    if (uri.scheme == "file") return path
-
-    // 只处理 content://
-    if (uri.scheme != "content") return null
-
-    // URL 解码（路径可能包含 %3A 等编码）
-    val decoded = try { java.net.URLDecoder.decode(path, "UTF-8") } catch (_: Exception) { path }
-
-    // com.android.externalstorage.documents: /document/primary:Download/video.mp4
-    // 或 /document/1A2B-3C4D:video.mp4 (SD卡)
-    if (decoded.startsWith("/document/")) {
-        val docId = decoded.removePrefix("/document/")
-        val colonIdx = docId.indexOf(':')
-        if (colonIdx != -1) {
-            val volume = docId.substring(0, colonIdx)
-            val filePath = docId.substring(colonIdx + 1)
-            return if (volume == "primary") "/storage/emulated/0/$filePath"
-                   else "/storage/$volume/$filePath"
-        }
-    }
-
-    // MediaStore 回退：通过 _data 列获取绝对路径
-    if (context != null) {
-        try {
-            val proj = arrayOf(android.provider.MediaStore.MediaColumns.DATA)
-            context.contentResolver.query(uri, proj, null, null, null)?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val idx = cursor.getColumnIndexOrThrow(android.provider.MediaStore.MediaColumns.DATA)
-                    return cursor.getString(idx)
-                }
-            }
-        } catch (_: Exception) { /* 静默失败 */ }
-    }
-
-    // /storage/ 直接路径
-    if (decoded.startsWith("/storage/")) return decoded
-
-    return null
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MediaCard(
@@ -285,7 +191,6 @@ private fun MediaCard(
     sizeMb: Double,
     durationMs: Long,
     isSelected: Boolean,
-    isExternal: Boolean,
     isAudio: Boolean,
     onSelect: () -> Unit,
     onDelete: () -> Unit,
@@ -304,7 +209,6 @@ private fun MediaCard(
             Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 缩略图区域
             if (isAudio) {
                 Icon(
                     Icons.Default.MusicNote,
@@ -324,11 +228,11 @@ private fun MediaCard(
                         val request = remember(videoPath) {
                             ImageRequest.Builder(context)
                                 .data(videoPath)
-                                .videoFrameMillis(1000) // 取第1秒帧
+                                .videoFrameMillis(1000)
                                 .memoryCachePolicy(CachePolicy.ENABLED)
                                 .diskCachePolicy(CachePolicy.ENABLED)
                                 .crossfade(true)
-                                .size(112) // 2x for retina
+                                .size(112)
                                 .build()
                         }
                         AsyncImage(
@@ -350,25 +254,8 @@ private fun MediaCard(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        modifier = Modifier.weight(1f, fill = false))
-                    if (isExternal) {
-                        Spacer(Modifier.width(6.dp))
-                        Surface(
-                            shape = MaterialTheme.shapes.extraSmall,
-                            color = MaterialTheme.colorScheme.secondaryContainer,
-                        ) {
-                            Text(
-                                text = "外部",
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
+                Text(text = name, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
                 Spacer(Modifier.height(4.dp))
                 Row {
                     Text(text = String.format(Locale.getDefault(), "%.1f MB", sizeMb),
@@ -387,12 +274,11 @@ private fun MediaCard(
                 Icon(Icons.Default.CheckCircle, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.width(8.dp))
             }
-            // 外部文件显示取消选择图标而非删除图标
             IconButton(onClick = onDelete) {
                 Icon(
-                    if (isExternal) Icons.Default.CheckCircle else Icons.Default.Delete,
+                    Icons.Default.Delete,
                     null,
-                    tint = if (isExternal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    tint = MaterialTheme.colorScheme.error
                 )
             }
         }

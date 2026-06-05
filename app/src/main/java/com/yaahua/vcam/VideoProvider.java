@@ -137,12 +137,9 @@ public class VideoProvider extends ContentProvider {
         File videoFile = null;
 
         if (videoName != null && !videoName.isEmpty()) {
-            // 支持绝对路径
-            if (videoName.startsWith("/")) {
-                File absFile = new File(videoName);
-                if (absFile.exists() && !absFile.isDirectory()) videoFile = absFile;
-            }
-            if (videoFile == null) videoFile = new File(videoDir, videoName);
+            // 统一用 Camera1 目录 + 文件名
+            String name = videoName.contains("/") ? new File(videoName).getName() : videoName;
+            videoFile = new File(videoDir, name);
         }
 
         // fallback to virtual.mp4
@@ -249,7 +246,6 @@ public class VideoProvider extends ContentProvider {
         String selectedVideo = configManager.getString(ConfigManager.KEY_SELECTED_VIDEO, null);
         int currentIndex = -1;
         if (selectedVideo != null && !selectedVideo.isEmpty()) {
-            // 支持绝对路径：提取文件名用于在当前目录匹配
             String searchName = selectedVideo.contains("/") ? new File(selectedVideo).getName() : selectedVideo;
             for (int i = 0; i < files.length; i++) {
                 if (files[i].getName().equals(searchName)) {
