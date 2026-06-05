@@ -59,6 +59,7 @@ public class Camera2SessionHook {
                 SharedState.c2_reader_Surfcae = null;
                 SharedState.c2_preview_Surfcae = null;
                 SharedState.is_first_hook_build = true;
+                SharedState.currentVideoPath = null; // 修复：摄像头重开时清空路径，确保 build() 时重建解码器
                 XposedBridge.log("【VCAM】打开相机C2");
 
                 File file = HookGuards.getVideoFile();
