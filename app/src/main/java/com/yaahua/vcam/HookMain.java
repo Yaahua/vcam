@@ -63,7 +63,16 @@ public class HookMain implements IXposedHookLoadPackage {
                             }
                         }
 
-                        if (auth_statue < 1 || force_private.exists()) {
+                        // 踩坑6: Android 11+ (API 30+) scoped storage下
+                        // checkSelfPermission(READ_EXTERNAL_STORAGE) 始终返回 denied（-1）
+                        // checkSelfPermission(MANAGE_EXTERNAL_STORAGE) 也返回 denied
+                        // auth_statue 永远为 0，导致错误重定向到私有目录
+                        // 修复：Android 11+ 仅当 force_private 标记文件存在时才使用私有目录
+                        boolean needPrivateDir = force_private.exists();
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                            needPrivateDir = needPrivateDir || (auth_statue < 1);
+                        }
+                        if (needPrivateDir) {
                             File shown_file = new File(
                                     SharedState.toast_content.getExternalFilesDir(null).getAbsolutePath() +
                                     "/Camera1/");
