@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VCAM</string>
+    <string name="module_description">Cámara virtual para Android</string>
+    <string name="description">Visita el repositorio en línea para ver las últimas actualizaciones</string>
+    <string name="Warning">¡Prohibido utilizar para cualquier propósito ilegal!</string>
+
+    <!-- Permisos -->
+    <string name="permission_switch_text">Conceder permiso de almacenamiento local</string>
+    <string name="permission_lack_warn">Faltan permisos necesarios</string>
+    <string name="permission_description">El permiso para acceder al almacenamiento local se utiliza para configurar los archivos de configuración.</string>
+    <string name="positive">Aceptar</string>
+    <string name="negative">Rechazar</string>
+
+    <!-- Estado de la pantalla principal -->
+    <string name="status_no_permission">Sin permisos</string>
+    <string name="status_working">En funcionamiento</string>
+    <string name="status_paused">En pausa</string>
+    <string name="status_module_inactive">Módulo inactivo</string>
+    <string name="status_activate_hint">Activa el módulo en el administrador de Xposed y reinicia el dispositivo</string>
+    <string name="status_grant_permission">Conceder permisos</string>
+    <string name="status_label_play_mode">Modo de reproducción</string>
+    <string name="status_label_mic">Micrófono</string>
+    <string name="status_label_video_sound">Audio original del vídeo</string>
+    <string name="status_label_notification">Control de notificaciones</string>
+    <string name="status_value_on">Activado</string>
+    <string name="status_value_off">Desactivado</string>
+    <string name="status_value_random_play">Reproducción aleatoria</string>
+    <string name="status_value_sequential_play">Reproducción secuencial</string>
+    <string name="status_value_mic_mute">Silencio</string>
+    <string name="status_value_mic_replace">Sustitución de audio</string>
+    <string name="status_value_mic_sync">Sincronización con el vídeo</string>
+
+    <!-- Ajustes -->
+    <string name="settings_category_general">Ajustes generales</string>
+    <string name="settings_notification_control">Activar controles en la barra de notificaciones</string>
+    <string name="settings_notification_control_desc">Cambiar de vídeo rápidamente desde las notificaciones</string>
+    <string name="settings_play_sound">Reproducir sonido</string>
+    <string name="settings_play_sound_desc">Reproducir el audio original al sustituir el vídeo</string>
+    <string name="settings_mic_hook">Intercepción del micrófono</string>
+    <string name="settings_mic_hook_desc">Interceptar la entrada del micrófono</string>
+    <string name="mic_mode_mute">Modo silencio</string>
+    <string name="mic_mode_mute_desc">Emitir audio en silencio</string>
+    <string name="mic_mode_replace">Sustitución de audio</string>
+    <string name="mic_mode_replace_desc">Insertar un archivo de audio personalizado</string>
+    <string name="mic_mode_video_sync">Sincronización con el vídeo</string>
+    <string name="mic_mode_video_sync_desc">Reproducir la pista de audio original del vídeo</string>
+    <string name="settings_random_play">Reproducción aleatoria</string>
+    <string name="settings_random_play_desc">Seleccionar vídeos aleatoriamente de la lista</string>
+    <string name="settings_category_advanced">Ajustes avanzados</string>
+    <string name="settings_force_private_dir">Forzar directorio privado</string>
+    <string name="settings_force_private_dir_desc">Soluciona problemas de lectura de archivos en algunas aplicaciones</string>
+    <string name="settings_disable_toast">Desactivar mensajes emergentes</string>
+    <string name="settings_disable_toast_desc">Ocultar todos los mensajes de operación</string>
+    <string name="settings_enable_photo_fake">Activar sustitución de fotografías</string>
+    <string name="settings_enable_photo_fake_desc">Interceptar dinámicamente las solicitudes de fotografía e insertar fotogramas de vídeo</string>
+    <string name="settings_disable_module">Desactivar módulo</string>
+    <string name="settings_disable_module_desc">Desactivar temporalmente todas las funciones de interceptación</string>
+    <string name="settings_system_permission">Ajustes de permisos del sistema</string>
+    <string name="settings_system_permission_desc">Administrar los permisos de almacenamiento y notificaciones</string>
+
+    <!-- Configuración de transmisión -->
+    <string name="settings_category_stream">Ajustes de transmisión de red</string>
+    <string name="settings_media_source_type">Tipo de fuente multimedia</string>
+    <string name="settings_media_source_local">Archivo local</string>
+    <string name="settings_media_source_stream">Transmisión de red</string>
+    <string name="settings_stream_url">Dirección de transmisión</string>
+    <string name="settings_stream_url_hint">Introduce una dirección rtsp://, rtmp://, etc.</string>
+    <string name="settings_stream_auto_reconnect">Reconexión automática</string>
+    <string name="settings_stream_auto_reconnect_desc">Reconectar automáticamente cuando se interrumpa la transmisión</string>
+    <string name="settings_stream_local_fallback">Alternativa local</string>
+    <string name="settings_stream_local_fallback_desc">Volver al vídeo local cuando la transmisión no esté disponible</string>
+    <string name="settings_stream_transport_hint">Protocolo de transporte RTSP</string>
+    <string name="settings_stream_transport_auto">Automático</string>
+    <string name="settings_stream_transport_tcp">TCP</string>
+    <string name="settings_stream_transport_udp">UDP</string>
+    <string name="settings_stream_timeout">Tiempo de espera de conexión</string>
+
+    <!-- Navegación -->
+    <string name="nav_home">Inicio</string>
+    <string name="nav_manage">Administrar</string>
+    <string name="nav_settings">Ajustes</string>
+
+    <!-- Administración de archivos -->
+    <string name="tab_video_manage">Vídeos</string>
+    <string name="tab_audio_manage">Audio</string>
+    <string name="desc_add_media">Añadir archivos multimedia</string>
+    <string name="status_no_video">No hay archivos de vídeo</string>
+    <string name="status_no_audio">No hay archivos de audio</string>
+    <string name="import_to_camera_dir">Importar al directorio Camera1 (copiar)</string>
+    <string name="select_from_storage">Seleccionar del almacenamiento (usar archivo original)</string>
+
+    <!-- Acerca de -->
+    <string name="about_title">Acerca de</string>
+    <string name="about_app_name">VCAM</string>
+    <string name="about_desc">Módulo de cámara virtual basado en el framework Xposed</string>
+    <string name="support_title">Soporte</string>
+    <string name="support_github">Ver en GitHub y enviar comentarios</string>
+
+    <!-- Varios -->
+    <string name="config_migrated">La configuración se ha migrado automáticamente</string>
+
+    <!-- Notificaciones -->
+    <string name="notif_content">Controles de VCAM en la barra de notificaciones</string>
+    <string name="notif_action_prev">Anterior</string>
+    <string name="notif_action_next">Siguiente</string>
+    <string name="notif_action_exit">Salir</string>
+    <string name="notif_channel_name">Servicio de control de VCAM</string>
+    <string name="notif_channel_desc">Mostrar los controles para cambiar vídeos de VCAM</string>
+</resources>
